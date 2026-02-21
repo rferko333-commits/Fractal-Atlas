@@ -6,29 +6,29 @@
     <title>Fractal Atlas - Ultimate</title>
     <style>
         :root {
-            --bg-color: #050505;
-            --panel-bg: #111;
+            --bg: #050505;
+            --panel: #111;
             --accent: #00d2ff;
             --text: #ddd;
         }
-        body { margin: 0; overflow: hidden; background: var(--bg-color); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; }
 
         /* HEADER */
         header {
-            height: 40px; display: flex; align-items: center; justify-content: space-between;
+            height: 45px; display: flex; align-items: center; justify-content: space-between;
             padding: 0 10px; border-bottom: 1px solid #333; background: #080808;
         }
         #back-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 10px; }
         .mode-tabs { display: flex; gap: 5px; }
         .tab-btn {
-            background: #222; border: 1px solid #444; color: #888; padding: 4px 10px;
+            background: #222; border: 1px solid #444; color: #888; padding: 6px 12px;
             cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px;
         }
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
         /* VIEWPORT */
         #viewport {
-            display: flex; height: calc(100vh - 190px); width: 100%;
+            display: flex; height: calc(100vh - 200px); width: 100%;
         }
         .canvas-container {
             flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden;
@@ -43,39 +43,35 @@
 
         /* CONTROLS */
         #controls {
-            height: 150px; background: #080808; border-top: 1px solid #333;
-            padding: 10px; overflow-x: auto;
+            height: 155px; background: #080808; border-top: 1px solid #333;
+            padding: 10px; overflow-y: auto;
         }
         
-        /* Grid Layout for Controls */
         .ctrl-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 15px; align-items: start;
         }
 
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
         input[type="range"] { width: 100%; cursor: pointer; height: 6px; background: #333; appearance: none; border-radius: 3px; }
-        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
-        select { background: #222; color: #eee; border: 1px solid #444; padding: 4px; border-radius: 4px; font-size: 11px; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; border: 1px solid #fff; }
+        select { background: #222; color: #eee; border: 1px solid #444; padding: 5px; border-radius: 4px; font-size: 11px; }
 
         .val-disp { font-size: 10px; color: var(--accent); float: right; }
         
-        /* RGB Specifics */
+        /* Specific Styles */
         .lbl-r { color: #ff6b6b; } .lbl-g { color: #51cf66; } .lbl-b { color: #339af0; }
-
-        /* Hide/Show Logic */
         .hidden { display: none !important; }
 
         .action-btn {
             background: #333; color: white; border: 1px solid #555;
-            padding: 8px 15px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold;
-            position: absolute; right: 10px; top: 5px;
+            padding: 6px 15px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold;
         }
         .action-btn:hover { background: #555; }
 
         #c-coords {
-            position: absolute; bottom: 160px; left: 10px;
+            position: absolute; bottom: 170px; left: 10px;
             background: rgba(0,0,0,0.8); padding: 5px 10px; font-family: monospace;
             font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: none;
         }
@@ -90,7 +86,7 @@
         <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
         <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
     </div>
-    <div style="width: 40px;"></div> <!-- Spacer -->
+    <div style="flex:1"></div>
     <button class="action-btn" onclick="app.saveImage()">SAVE VIEW</button>
 </header>
 
@@ -109,56 +105,79 @@
 
 <div id="controls">
     <div class="ctrl-grid">
-        <!-- Universal Controls -->
+        
+        <!-- 1. Universal Physics -->
+        <div class="control-group">
+            <label>Fractal Equation</label>
+            <select id="sl-eq" onchange="app.updateParams()">
+                <option value="0">Mandelbrot (z^2+c)</option>
+                <option value="1">Cubic (z^3+c)</option>
+                <option value="2">Quintic (z^5+c)</option>
+                <option value="3">Burning Ship</option>
+                <option value="4">Tricorn</option>
+            </select>
+        </div>
+
         <div class="control-group">
             <label>Iterations <span id="val-iter" class="val-disp">300</span></label>
             <input type="range" id="sl-iter" min="50" max="1000" value="300">
         </div>
 
-        <div class="control-group">
-            <label>Zoom Speed <span id="val-zoom" class="val-disp">1.0</span></label>
-            <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
+        <!-- 2. Nebula RGB (Only Visible in Nebula Mode) -->
+        <div class="control-group hidden" id="grp-neb-r">
+            <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
+            <input type="range" id="sl-red" min="0" max="500" value="200">
+        </div>
+        <div class="control-group hidden" id="grp-neb-g">
+            <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
+            <input type="range" id="sl-grn" min="0" max="500" value="100">
+        </div>
+        <div class="control-group hidden" id="grp-neb-b">
+            <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
+            <input type="range" id="sl-blu" min="0" max="500" value="50">
         </div>
 
-        <!-- Palette (Only for Fractals/Atlas) -->
+        <!-- 3. Appearance -->
+        <div class="control-group hidden" id="grp-neb-den">
+            <label>Nebula Density (Points)</label>
+            <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
+        </div>
+
         <div class="control-group" id="grp-palette">
             <label>Color Palette</label>
             <select id="sl-palette" onchange="app.updateParams()">
                 <option value="0">Magma</option>
                 <option value="1">Viridis</option>
                 <option value="2">Ice</option>
-                <option value="3">Fire</option>
-                <option value="4">Psychedelic</option>
+                <option value="3">Psychedelic</option>
             </select>
         </div>
 
-        <!-- Nebula Controls (Only for Nebula) -->
-        <div class="control-group hidden" id="grp-neb-density">
-            <label>Nebula Density (Points) <span id="val-den" class="val-disp">1.0</span></label>
-            <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.0">
+        <!-- 4. Atlas Specifics (Only Visible in Atlas Mode) -->
+        <div class="control-group hidden" id="grp-atlas-type">
+            <label>Atlas Style</label>
+            <select id="sl-atlas-style" onchange="app.updateParams()">
+                <option value="0">Standard Atlas</option>
+                <option value="1">Nebula Atlas</option>
+            </select>
         </div>
 
-        <div class="control-group hidden" id="grp-neb-rgb">
-            <label class="lbl-r">Red Cutoff <span id="val-red" class="val-disp">200</span></label>
-            <input type="range" id="sl-red" min="0" max="500" value="200">
-            
-            <label class="lbl-g">Green Cutoff <span id="val-grn" class="val-disp">100</span></label>
-            <input type="range" id="sl-grn" min="0" max="500" value="100">
-            
-            <label class="lbl-b">Blue Cutoff <span id="val-blu" class="val-disp">50</span></label>
-            <input type="range" id="sl-blu" min="0" max="500" value="50">
+        <div class="control-group hidden" id="grp-atlas-grid">
+            <label>Grid Size <span id="val-grid" class="val-disp">10</span></label>
+            <input type="range" id="sl-grid" min="2" max="25" step="1" value="10">
         </div>
 
-        <!-- Atlas Grid (Only for Atlas) -->
-        <div class="control-group hidden" id="grp-atlas">
-            <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
-            <input type="range" id="sl-grid" min="2" max="30" step="1" value="10">
-        </div>
-
+        <!-- 5. Navigation -->
         <div class="control-group">
-            <label>&nbsp;</label> <!-- Spacer -->
-            <button class="action-btn" style="position:static; width:100%" onclick="app.resetViews()">RESET POSITIONS</button>
+            <label>Zoom Speed</label>
+            <input type="range" id="sl-zoom" min="0.1" max="3.0" step="0.1" value="1.0">
         </div>
+        
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="action-btn" style="width:100%" onclick="app.resetViews()">RESET POS</button>
+        </div>
+
     </div>
 </div>
 
@@ -174,80 +193,80 @@
 
     // View Uniforms
     uniform vec2 u_res;
-    uniform vec2 u_offset;    // Center of the view
-    uniform float u_zoom;     // Scale of the view
-    uniform vec2 u_c_selected; // The C value picked by user
+    uniform vec2 u_offset;    // Camera Center
+    uniform float u_zoom;     // Camera Zoom
+    uniform vec2 u_c_select;  // User Clicked C
 
-    // Logic Flags
-    uniform int u_is_atlas;   // 1 if Left Screen in Atlas Mode
-    uniform int u_is_julia;   // 1 if Right Screen (or Atlas Tiles)
-    uniform int u_style;      // 0=Standard, 1=Nebula
-    uniform int u_palette;    // Palette ID
+    // Mode Flags
+    uniform int u_mode_id;    // 0=Frac, 1=Neb, 2=Atlas
+    uniform int u_is_right;   // 1 if Right Canvas (Julia side)
+    uniform int u_atlas_neb;  // 1 if Atlas is in Nebula Mode
 
-    // Params
+    // Parameters
+    uniform int u_eq;         // Equation ID
     uniform float u_iter;
     uniform float u_grid;
-    uniform float u_density;  // Simulates "Points" / Brightness
+    uniform float u_density;  
+    uniform int u_palette;
     uniform float u_lim_r;
     uniform float u_lim_g;
     uniform float u_lim_b;
 
-    // --- PALETTE LOGIC ---
-    vec3 get_color(float t, int p) {
+    // Complex Math Helpers
+    vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
+    
+    vec2 cpow(vec2 z, float n) {
+        float r = length(z);
+        float a = atan(z.y, z.x);
+        return pow(r, n) * vec2(cos(a*n), sin(a*n));
+    }
+
+    // Palette Generator
+    vec3 get_color(float t) {
         vec3 a, b, c, d;
-        if (p == 0) { // Magma-ish
-            a = vec3(0.5); b = vec3(0.5); c = vec3(1.0); d = vec3(0.3, 0.2, 0.2);
-        } else if (p == 1) { // Viridis-ish
-            a = vec3(0.5); b = vec3(0.5); c = vec3(1.0); d = vec3(0.0, 0.33, 0.67);
-        } else if (p == 2) { // Ice
-            a = vec3(0.5); b = vec3(0.5); c = vec3(0.8); d = vec3(0.15, 0.2, 0.3);
-        } else if (p == 3) { // Fire
-            a = vec3(0.5); b = vec3(0.5); c = vec3(1.0, 1.0, 0.5); d = vec3(0.8, 0.9, 0.3);
-        } else { // Psychedelic
-            a = vec3(0.5); b = vec3(0.5); c = vec3(2.0); d = vec3(0.5, 0.2, 0.25);
-        }
+        if (u_palette == 0) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.3,0.2,0.2); } // Magma
+        else if (u_palette == 1) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.0,0.33,0.67); } // Viridis
+        else if (u_palette == 2) { a=vec3(0.5); b=vec3(0.5); c=vec3(0.8); d=vec3(0.15,0.2,0.3); } // Ice
+        else { a=vec3(0.5); b=vec3(0.5); c=vec3(2.0); d=vec3(0.5,0.2,0.25); } // Psych
         return a + b * cos(6.28318 * (c * t + d));
     }
 
     void main() {
-        // Base UV (-0.5 to 0.5, corrected for aspect)
-        vec2 uv_screen = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
-
+        vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
         vec2 z, c;
-        float zoom = u_zoom;
         
-        // --- COORDINATE SYSTEM ---
-        if (u_is_atlas == 1) {
-            // ATLAS MODE LOGIC
-            // 1. Grid Logic (Static on screen, unaffected by zoom)
-            vec2 uv_grid = uv_screen * u_grid;
-            vec2 cell_id = floor(uv_grid); 
-            vec2 tile_uv = fract(uv_grid) - 0.5; // Local coords inside tile
-
-            // 2. Map Logic (Determines C for the tile, affected by zoom)
-            // Range of C visible: 4.0 / zoom
-            float range = 4.0 / zoom;
+        // --- VIEWPORT LOGIC ---
+        bool is_atlas_grid = (u_mode_id == 2 && u_is_right == 0);
+        
+        if (is_atlas_grid) {
+            // ATLAS GRID LOGIC
+            vec2 guv = uv * u_grid;
+            vec2 cell = floor(guv);
+            vec2 tile = fract(guv) - 0.5;
             
-            // This maps the Grid Cell ID (e.g. -5 to 5) to the Complex Plane (e.g. -2 to 2)
-            // relative to the current camera offset
-            vec2 c_map = u_offset + (cell_id / u_grid) * range;
-
-            z = tile_uv * 3.0; // Zoom out slightly inside the tile
-            c = c_map;         // The C value for this tile
-        } 
-        else {
-            // STANDARD / ZOOM MODE
-            vec2 world_pos = uv_screen / zoom + u_offset;
-            if (u_is_julia == 1) {
-                z = world_pos;
-                c = u_c_selected;
+            // Map Cell to Complex Plane (Affected by Zoom/Offset)
+            float range = 4.0 / u_zoom;
+            vec2 c_map = u_offset + (cell / u_grid) * range;
+            
+            z = tile * 3.0; // Fixed tile zoom
+            c = c_map;
+        } else {
+            // STANDARD LOGIC
+            vec2 p = uv / u_zoom + u_offset;
+            
+            // If Right Side OR (Left Side and Atlas Mode but not grid?? No, just Julia)
+            // Left Side = Mandel/Buddha. Right Side = Julia/NebulaJulia.
+            
+            if (u_is_right == 1) {
+                z = p; 
+                c = u_c_select;
             } else {
                 z = vec2(0.0);
-                c = world_pos;
+                c = p;
             }
         }
 
-        // --- CALCULATION ---
+        // --- FRACTAL LOOP ---
         float iter = 0.0;
         float min_dist = 100.0;
         float z_mag = 0.0;
@@ -256,57 +275,68 @@
         for (int i = 0; i < MAX_LOOP; i++) {
             if (float(i) > u_iter) break;
 
-            float x = (z.x * z.x - z.y * z.y) + c.x;
-            float y = (2.0 * z.x * z.y) + c.y;
-            z = vec2(x, y);
+            // Equation Catalog
+            vec2 nz;
+            if (u_eq == 0) nz = csqr(z) + c;                // Mandelbrot
+            else if (u_eq == 1) nz = cpow(z, 3.0) + c;      // Cubic
+            else if (u_eq == 2) nz = cpow(z, 5.0) + c;      // Quintic
+            else if (u_eq == 3) nz = vec2(abs(z.x)*abs(z.x) - abs(z.y)*abs(z.y), 2.0*abs(z.x)*abs(z.y)) + c; // Burning Ship
+            else nz = csqr(vec2(z.x, -z.y)) + c;            // Tricorn
             
+            z = nz;
             z_mag = dot(z,z);
-            if (z_mag > 100.0) break; // Escape
-
-            min_dist = min(min_dist, length(z)); // For Nebula
+            if (z_mag > 100.0) break;
+            
+            min_dist = min(min_dist, length(z));
             iter += 1.0;
         }
 
-        // --- COLORING ---
+        // --- COLORING & STYLING ---
         vec3 col = vec3(0.0);
+        
+        // Determine if we are rendering in Nebula Style
+        // True if: Mode is Nebula(1) OR (Mode is Atlas(2) AND AtlasStyle is Nebula(1))
+        bool is_nebula_style = (u_mode_id == 1) || (u_mode_id == 2 && u_atlas_neb == 1);
 
-        if (u_style == 1) {
-            // NEBULA STYLE
-            // We use orbit trap distance for structure, and iteration count for RGB cutoffs
-            float brightness = exp(-min_dist * (1.5 + u_density)); // Structure
+        if (is_nebula_style) {
+            // NEBULA "STACKING" LOGIC
+            // Structure defined by Orbit Trap (Glow)
+            float glow = exp(-min_dist * (1.0 + u_density)); 
             
-            // Apply Thresholds (Hard cutoff smoothed slightly)
-            float r = smoothstep(u_lim_r, u_lim_r + 5.0, iter);
-            float g = smoothstep(u_lim_g, u_lim_g + 5.0, iter);
-            float b = smoothstep(u_lim_b, u_lim_b + 5.0, iter);
+            // Add Channels Stacked
+            vec3 stack = vec3(0.0);
+            if (iter > u_lim_r) stack.r += glow;
+            if (iter > u_lim_g) stack.g += glow;
+            if (iter > u_lim_b) stack.b += glow;
             
-            // Composition
-            col = vec3(brightness * r, brightness * g, brightness * b);
-            col *= (u_density * 2.0); // Overall Gain
+            // Smooth out the hard cutoffs slightly
+            float smooth_fac = 0.1;
+            stack *= smooth_fac * u_density * 3.0; 
+            
+            col = stack;
         } 
         else {
-            // FRACTAL STYLE
-            if (z_mag < 100.0) {
-                col = vec3(0.0);
-            } else {
+            // STANDARD STYLE
+            if (z_mag < 100.0) col = vec3(0.0);
+            else {
                 float sn = iter - log2(log2(dot(z,z))) + 4.0;
-                col = get_color(sn * 0.03, u_palette);
+                col = get_color(sn * 0.02);
             }
         }
 
         // --- OVERLAYS ---
-        // Grid lines for Atlas
-        if (u_is_atlas == 1) {
+        // Grid Lines (Only in Atlas Grid)
+        if (is_atlas_grid) {
             vec2 guv = abs(fract(gl_FragCoord.xy / u_res.y * u_grid) - 0.5);
-            if (guv.x > 0.48 || guv.y > 0.48) col *= 0.2;
+            if (guv.x > 0.48 || guv.y > 0.48) col *= 0.5;
         }
 
-        // Dot for Selected C (Only on standard Mandel/Nebula Mandel)
-        if (u_is_atlas == 0 && u_is_julia == 0) {
-            float d = distance(c, u_c_selected);
-            float dot_size = 0.015 / zoom;
-            if (d < dot_size) col = vec3(1.0);
-            else if (d < dot_size * 1.3) col = vec3(0.0);
+        // Selection Dot (Only on Left Screen, NOT in Atlas Grid mode)
+        if (u_is_right == 0 && u_mode_id != 2) {
+            float d = distance(c, u_c_select);
+            float sz = 0.015 / u_zoom; 
+            if (d < sz) col = vec3(1.0);
+            else if (d < sz*1.3) col = vec3(0.0);
         }
 
         gl_FragColor = vec4(col, 1.0);
@@ -316,15 +346,13 @@
 <script>
 const app = {
     state: {
-        mode: 0, // 0=Frac, 1=Neb, 2=Atlas
+        mode: 0, 
         c: { x: -0.76, y: 0.12 },
         left: { offset: {x: -0.5, y: 0.0}, zoom: 1.0 },
         right: { offset: {x: 0.0, y: 0.0}, zoom: 1.0 },
         params: { 
-            iter: 300, 
-            grid: 10, 
-            palette: 0,
-            density: 1.0,
+            eq: 0, iter: 300, grid: 10, palette: 0,
+            atlas_neb: 0, density: 1.5,
             r_lim: 200, g_lim: 100, b_lim: 50
         },
         dragging: false, activeCanvas: null, lastMouse: {x:0,y:0}
@@ -375,32 +403,15 @@ const app = {
     render: function(ctx, isRight) {
         const { gl, prog, canvas } = ctx;
         
-        // Resize
         const dpr = window.devicePixelRatio || 1;
         const w = Math.floor(canvas.clientWidth * dpr), h = Math.floor(canvas.clientHeight * dpr);
         if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; gl.viewport(0,0,w,h); }
-
-        // Logic Flags
-        // Mode 0: L=Man(Atlas=0, Jul=0, Sty=0) | R=Jul(Atlas=0, Jul=1, Sty=0)
-        // Mode 1: L=Man(Atlas=0, Jul=0, Sty=1) | R=Jul(Atlas=0, Jul=1, Sty=1)
-        // Mode 2: L=Atl(Atlas=1, Jul=0, Sty=?) | R=Jul(Atlas=0, Jul=1, Sty=?)
-        
-        // Nebula Style is ON if Mode is 1 OR (Mode is 2 AND we want Nebula Atlas?)
-        // Let's assume Atlas Mode (2) is Standard styling unless we add a "Nebula Atlas" mode.
-        // For now, Mode 2 is standard style.
-        
-        let isAtlas = (!isRight && this.state.mode === 2) ? 1 : 0;
-        let isJulia = isRight ? 1 : 0;
-        let style = (this.state.mode === 1) ? 1 : 0;
-
-        // Special case: If user wants Nebula Atlas, we haven't built a UI for Mode 3 yet, 
-        // but the shader supports it. We stick to requirements.
 
         const u = (n,v) => { const l=gl.getUniformLocation(prog,n); if(typeof v==='number')gl.uniform1f(l,v); else gl.uniform2f(l,v[0],v[1]); };
         const ui = (n,v) => gl.uniform1i(gl.getUniformLocation(prog,n),v);
 
         u('u_res', [canvas.width, canvas.height]);
-        u('u_c_selected', [this.state.c.x, this.state.c.y]);
+        u('u_c_select', [this.state.c.x, this.state.c.y]);
         u('u_iter', this.state.params.iter);
         u('u_grid', this.state.params.grid);
         u('u_density', this.state.params.density);
@@ -408,10 +419,11 @@ const app = {
         u('u_lim_g', this.state.params.g_lim);
         u('u_lim_b', this.state.params.b_lim);
         
-        ui('u_is_atlas', isAtlas);
-        ui('u_is_julia', isJulia);
-        ui('u_style', style);
+        ui('u_mode_id', this.state.mode);
+        ui('u_is_right', isRight ? 1 : 0);
+        ui('u_atlas_neb', this.state.params.atlas_neb);
         ui('u_palette', this.state.params.palette);
+        ui('u_eq', this.state.params.eq);
 
         const cam = isRight ? this.state.right : this.state.left;
         u('u_offset', [cam.offset.x, cam.offset.y]);
@@ -430,42 +442,60 @@ const app = {
         this.state.mode = m;
         document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===m));
         
-        const labels = [['Mandelbrot', 'Julia Set'], ['Nebula Mandel', 'Nebula Julia'], ['Julia Atlas', 'Julia Inspector']];
-        document.getElementById('label-left').innerText = labels[m][0];
-        document.getElementById('label-right').innerText = labels[m][1];
+        // Dynamic Labels based on Mode and Atlas Sub-Style
+        const isNebAtlas = (m===2 && this.state.params.atlas_neb === 1);
+        
+        let l = "Mandelbrot", r = "Julia Set";
+        if (m===1) { l="Buddhabrot"; r="Nebula Julia"; }
+        if (m===2) { l=isNebAtlas?"Nebula Atlas":"Julia Atlas"; r="Inspector"; }
+        
+        document.getElementById('label-left').innerText = l;
+        document.getElementById('label-right').innerText = r;
         
         this.updateUI();
     },
 
     updateUI: function() {
-        // Toggle visibility of controls based on mode
         const show = (id, cond) => document.getElementById(id).classList.toggle('hidden', !cond);
         const m = this.state.mode;
+        const isNebAtlas = (this.state.params.atlas_neb === 1);
 
-        show('grp-palette', m !== 1); // Show palette if NOT nebula
-        show('grp-neb-density', m === 1);
-        show('grp-neb-rgb', m === 1);
-        show('grp-atlas', m === 2);
+        // Visibility Logic
+        // RGB/Density: Show if Mode=Nebula OR (Mode=Atlas AND Style=Nebula)
+        const showNebControls = (m === 1) || (m === 2 && isNebAtlas);
+        
+        show('grp-palette', !showNebControls);
+        show('grp-neb-den', showNebControls);
+        show('grp-neb-r', showNebControls);
+        show('grp-neb-g', showNebControls);
+        show('grp-neb-b', showNebControls);
+        
+        show('grp-atlas-type', m === 2);
+        show('grp-atlas-grid', m === 2);
     },
 
     updateParams: function() {
         const val = id => parseFloat(document.getElementById(id).value);
+        this.state.params.eq = parseInt(document.getElementById('sl-eq').value);
         this.state.params.iter = val('sl-iter');
         this.state.params.grid = val('sl-grid');
         this.state.params.palette = parseInt(document.getElementById('sl-palette').value);
+        this.state.params.atlas_neb = parseInt(document.getElementById('sl-atlas-style').value);
         this.state.params.density = val('sl-den');
         this.state.params.r_lim = val('sl-red');
         this.state.params.g_lim = val('sl-grn');
         this.state.params.b_lim = val('sl-blu');
         
-        // Update display text
         const txt = (id, v) => document.getElementById(id).innerText = v;
         txt('val-iter', this.state.params.iter);
         txt('val-grid', this.state.params.grid);
-        txt('val-den', this.state.params.density);
         txt('val-red', this.state.params.r_lim);
         txt('val-grn', this.state.params.g_lim);
         txt('val-blu', this.state.params.b_lim);
+        
+        // If changing Atlas Style, update labels
+        if (this.state.mode === 2) this.setMode(2);
+        else this.updateUI(); // Ensure controls update
     },
 
     resetViews: function() {
@@ -481,11 +511,9 @@ const app = {
     },
 
     attachEvents: function() {
-        // Sliders
         const inputs = ['sl-iter','sl-grid','sl-den','sl-red','sl-grn','sl-blu','sl-zoom'];
         inputs.forEach(id => document.getElementById(id).oninput = () => this.updateParams());
 
-        // Mouse
         [this.contexts[0].canvas, this.contexts[1].canvas].forEach((c, idx) => {
             const isRight = idx === 1;
             c.addEventListener('mousedown', e => {
@@ -493,16 +521,28 @@ const app = {
                 this.state.activeCanvas = isRight ? 'right' : 'left';
                 this.state.lastMouse = { x: e.clientX, y: e.clientY };
 
-                // Picking C (Only on Left Screen, Not in Atlas Mode)
+                // Picking C (Only on Left Screen, NOT in Atlas Mode)
                 if (!isRight && this.state.mode !== 2) {
                     const r = c.getBoundingClientRect();
                     const cam = this.state.left;
-                    const asp = c.width/c.height;
-                    const nx = ((e.clientX-r.left)/r.width - 0.5)*2;
-                    const ny = -((e.clientY-r.top)/r.height - 0.5)*2;
+                    // Coordinate Mapping (MUST MATCH SHADER)
+                    // Shader: uv = (frag - 0.5*res) / res.y; 
+                    // p = uv/zoom + offset;
                     
-                    const cx = (nx * asp) / cam.zoom + cam.offset.x;
+                    // JS Aspect Correct Logic:
+                    const aspect = c.width/c.height;
+                    
+                    // Normalized Device Coords (-1 to 1)
+                    // We need to account for the Aspect Ratio being applied to X in the shader logic
+                    // In shader: (gl_FragCoord.xy - 0.5*res) / res.y
+                    // This means Y is -0.5 to 0.5. X is -0.5*aspect to 0.5*aspect.
+                    
+                    const nx = ((e.clientX - r.left) / r.width - 0.5) * aspect; 
+                    const ny = -((e.clientY - r.top) / r.height - 0.5); // Y is inverted in DOM
+                    
+                    const cx = nx / cam.zoom + cam.offset.x;
                     const cy = ny / cam.zoom + cam.offset.y;
+                    
                     this.state.c = { x: cx, y: cy };
                     document.getElementById('c-coords').innerText = `C: ${cx.toFixed(4)}, ${cy.toFixed(4)}`;
                 }
@@ -515,7 +555,8 @@ const app = {
                     const dy = e.clientY - this.state.lastMouse.y;
                     this.state.lastMouse = { x: e.clientX, y: e.clientY };
                     
-                    const factor = 2.0 / (c.clientHeight * cam.zoom);
+                    // Panning math matches zoom
+                    const factor = 1.0 / (c.clientHeight * cam.zoom);
                     cam.offset.x -= dx * factor;
                     cam.offset.y += dy * factor;
                 }
