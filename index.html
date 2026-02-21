@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Fractal Atlas - Master</title>
     <style>
-        :root { --bg: #000; --accent: #00d2ff; --text: #eee; --glass: rgba(20, 20, 20, 0.9); --border: 1px solid #333; }
+        :root { --bg: #000; --accent: #00d2ff; --text: #eee; --glass: rgba(20, 20, 20, 0.85); --border: 1px solid #333; }
         body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
 
         /* HEADER */
@@ -16,11 +16,9 @@
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
         .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; color: #ccc;}
 
-        /* VIEWPORT */
-        #viewport { display: flex; height: calc(100vh - 50px); width: 100%; position: relative; }
-        #main-content { flex: 1; display: flex; flex-direction: column; }
+        /* LAYOUT & VIEWPORT */
+        #main-content { display: flex; flex-direction: column; height: calc(100vh - 50px); }
         #canvas-area { flex: 1; display: flex; position: relative; }
-        
         .canvas-container { flex: 1; position: relative; border-right: var(--border); overflow: hidden; background: #000; }
         canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .cvs-cpu { z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.2s;} 
@@ -29,18 +27,16 @@
         
         .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 10;}
 
-        /* INFO OVERLAY (Bottom Left) */
+        /* INFO OVERLAYS */
         #info-overlay { position: absolute; bottom: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: none; z-index: 20; }
         .tag { background: rgba(0,0,0,0.7); padding: 5px 8px; font-size: 11px; border: var(--border); border-radius: 4px; color: #aaa; font-family: monospace; width: fit-content; pointer-events: auto;}
         .tag-warn { color: #ff4444; border-color: #ff4444; display: none; }
         .tag-lock { color: #00ff88; border-color: #00ff88; display: none; }
 
-        /* BOTTOM CONTROLS (Desktop Only) */
+        /* CONTROLS (Both Bottom Panel and Slide-out Menu) */
         #bottom-controls { height: 160px; background: #080808; border-top: var(--border); padding: 10px 15px; overflow-y: auto; }
-        
-        /* SLIDE-OUT MENU (Mobile Primary) */
         #settings-menu { 
-            position: absolute; top: 50px; right: 0; bottom: 0; width: 300px; 
+            position: fixed; top: 50px; right: 0; bottom: 0; width: 300px; 
             background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border-left: var(--border); transform: translateX(100%); transition: transform 0.3s ease;
             z-index: 50; display: flex; flex-direction: column;
@@ -67,10 +63,10 @@
         /* MOBILE OPTIMIZATION */
         @media (max-width: 768px) {
             #bottom-controls { display: none; }
-            #viewport { height: calc(100vh - 50px); }
-            #info-overlay { bottom: 10px; }
+            #main-content { height: calc(100vh - 50px); }
+            #canvas-area { flex-direction: column; }
+            .canvas-container { border-right: none; border-bottom: var(--border); }
             #settings-menu { width: 85%; }
-            .canvas-container { border-right: none; }
         }
     </style>
 </head>
@@ -108,7 +104,7 @@
     </div>
     
     <div id="bottom-controls">
-        <!-- Controls will be injected here by JS -->
+        <!-- Controls injected here by JS -->
     </div>
 </div>
 
@@ -116,7 +112,7 @@
 <div id="settings-menu">
     <div class="settings-content">
         <h3 class="settings-title">Settings</h3>
-        <!-- Controls will be injected here by JS -->
+        <!-- Controls injected here by JS -->
     </div>
 </div>
 
@@ -127,8 +123,8 @@
         <div class="control-group">
             <label>Target Window</label>
             <select id="save-view">
-                <option value="left">Left Window</option>
-                <option value="right" selected>Right Window</option>
+                <option value="left">Left</option>
+                <option value="right" selected>Right</option>
             </select>
         </div>
         <div class="control-group" id="row-res">
@@ -143,7 +139,7 @@
                 <input type="number" id="save-w" value="4000" placeholder="W">
                 <input type="number" id="save-h" value="4000" placeholder="H">
             </div>
-            <div style="font-size:10px; color:#888; margin-top:5px;">Nebulae save exactly what is visible to preserve data.</div>
+            <div style="font-size:10px; color:#888; margin-top:5px;">Nebulae save exactly what is visible.</div>
         </div>
         <div style="display:flex; gap:10px; margin-top:10px;">
             <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
@@ -163,13 +159,13 @@ const ui = {
                 <label>Equation</label>
                 <div style="display:flex; gap: 5px;">
                     <select id="${prefix}sel-preset" style="flex:1;">
-                        <option value="z^2 + c">Mandelbrot (z²)</option> <option value="z^3 + c">Cubic (z³)</option>
-                        <option value="z^4 + c">Quartic (z⁴)</option> <option value="z^5 + c">Quintic (z⁵)</option>
-                        <option value="burningship">Burning Ship</option> <option value="tricorn">Tricorn</option>
-                        <option value="sin(z) + c">Sine Fractal</option>
+                        <option value="z^2 + c">Mandelbrot (z²)</option><option value="z^3 + c">Cubic (z³)</option>
+                        <option value="z^4 + c">Quartic (z⁴)</option><option value="z^5 + c">Quintic (z⁵)</option>
+                        <option value="burningship">Burning Ship</option><option value="tricorn">Tricorn</option>
+                        <option value="sin(z) + c">Sine</option>
                     </select>
                     <input type="text" id="${prefix}inp-eq" value="z^2 + c" style="flex:1;">
-                    <button class="action-btn" style="background:var(--accent); color:#000;" id="${prefix}btn-compile">APPLY</button>
+                    <button class="action-btn" id="${prefix}btn-compile">APPLY</button>
                 </div>
             </div>
             <div class="control-group">
@@ -190,42 +186,26 @@ const ui = {
             </div>
             <div class="control-group" id="${prefix}grp-pal">
                 <label>Palette</label>
-                <select id="${prefix}sel-pal">
-                    <option value="0">Magma</option> <option value="1">Viridis</option>
-                    <option value="2">Ice</option> <option value="3">Electric</option>
-                </select>
+                <select id="${prefix}sel-pal"><option value="0">Magma</option><option value="1">Viridis</option><option value="2">Ice</option><option value="3">Electric</option></select>
             </div>
             <div class="control-group hidden" id="${prefix}grp-grid">
                 <label>Atlas Grid <span id="${prefix}val-grid" class="val-disp">10</span></label>
                 <input type="range" id="${prefix}sl-grid" min="2" max="100" value="10">
             </div>
-            <div class="control-group">
-                <label>Zoom Speed</label>
-                <input type="range" id="${prefix}sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
-            </div>
-            <div class="control-group">
-                <label>&nbsp;</label>
-                <button class="action-btn" id="${prefix}btn-reset">RESET CAMERA</button>
-            </div>
+            <div class="control-group"><label>Zoom Speed</label><input type="range" id="${prefix}sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0"></div>
+            <div class="control-group"><label>&nbsp;</label><button class="action-btn" id="${prefix}btn-reset">RESET CAMERA</button></div>
         </div>
     `,
     init: function() {
         document.getElementById('bottom-controls').innerHTML = this.buildControls();
         document.querySelector('#settings-menu .settings-content').insertAdjacentHTML('beforeend', this.buildControls('menu-'));
-        this.controlIds = ['sel-preset','inp-eq','sl-iter','sl-red','sl-grn','sl-blu','sl-den','sel-pal','sl-grid','sl-zoom'];
+        
+        const ids = ['sel-preset','inp-eq','sl-iter','sl-red','sl-grn','sl-blu','sl-den','sel-pal','sl-grid','sl-zoom'];
         
         // Sync controls
-        this.controlIds.forEach(id => {
-            const main = document.getElementById(id), menu = document.getElementById('menu-'+id);
-            const sync = (src, dest) => {
-                dest.value = src.value;
-                app.state.p[id.replace('sl-','').replace('sel-','').replace('inp-','')] = src.type==='range'?parseFloat(src.value):src.value;
-                if(src.type === 'range') {
-                    document.getElementById(`val-${id.slice(3)}`).innerText = src.value;
-                    document.getElementById(`menu-val-${id.slice(3)}`).innerText = src.value;
-                }
-                app.triggerReset();
-            };
+        ids.forEach(id => {
+            const main=document.getElementById(id), menu=document.getElementById('menu-'+id);
+            const sync = (src, dest) => { dest.value = src.value; app.updParams(); };
             main.addEventListener('input', () => sync(main, menu));
             menu.addEventListener('input', () => sync(menu, main));
         });
@@ -236,6 +216,7 @@ const ui = {
         document.getElementById('btn-reset').onclick = app.resetPos;
         document.getElementById('menu-btn-reset').onclick = app.resetPos;
         
+        // Setup all input handlers
         document.querySelectorAll('.canvas-container').forEach((cont, idx) => {
             const isR = idx===1;
             const handleInput = (e, type) => {
@@ -246,58 +227,57 @@ const ui = {
                 if (type === 'start') {
                     app.state.active = isR ? 'r' : 'l'; app.state.drag = true; app.state.last = {x:clientX,y:clientY};
                     if (!isR && !app.state.locked) {
-                        const r = cont.getBoundingClientRect();
-                        const asp = cont.clientWidth/cont.clientHeight, nx = ((clientX-r.left)/cont.clientWidth-0.5)*asp, ny = -((clientY-r.top)/cont.clientHeight-0.5);
+                        const r=cont.getBoundingClientRect(), asp=r.width/r.height;
+                        const nx=((clientX-r.left)/r.width-0.5)*asp, ny=-((clientY-r.top)/r.height-0.5);
                         const wx=nx/cam.z+cam.x, wy=ny/cam.z+cam.y;
-                        const dist = Math.hypot(wx - app.state.c.x, wy - app.state.c.y) * cam.z * cont.clientHeight;
+                        const dist = Math.hypot(wx - app.state.c.x, wy - app.state.c.y) * cam.z * r.height;
+                        
                         if(dist < 30) { app.state.dragPoint=true; app.state.drag=false; return; }
-                        app.state.c.x = wx; app.state.c.y = wy; ui.updateCoords(); app.triggerReset();
+                        app.state.c.x=wx; app.state.c.y=wy; ui.updateCoords(); app.triggerReset();
                     }
                 } else if (type === 'move' && (app.state.drag || app.state.dragPoint)) {
                     if(app.state.active !== (isR?'r':'l')) return;
                     const r = cont.getBoundingClientRect();
                     
                     if(app.state.dragPoint && !isR) {
-                        const asp = cont.clientWidth/cont.clientHeight, nx = ((clientX-r.left)/cont.clientWidth-0.5)*asp, ny = -((clientY-r.top)/cont.clientHeight-0.5);
+                        const asp=r.width/r.height, nx=((clientX-r.left)/r.width-0.5)*asp, ny=-((clientY-r.top)/r.height-0.5);
                         app.state.c.x = nx/cam.z+cam.x; app.state.c.y = ny/cam.z+cam.y;
                         ui.updateCoords(); app.triggerReset();
-                    } else {
+                    } else if (app.state.drag) {
                         const dx=clientX-app.state.last.x, dy=clientY-app.state.last.y;
-                        const asp=cont.clientWidth/cont.clientHeight, factor=1.0/(cont.clientHeight*cam.z);
+                        const asp=r.width/r.height, factor=1.0/(r.height*cam.z);
                         cam.x -= dx*factor*asp; cam.y += dy*factor;
                         if(app.state.mode!==0) app.triggerReset();
                     }
                     app.state.last = {x:clientX, y:clientY};
                 }
             };
-            cont.addEventListener('dblclick', ()=>{app.state.locked=!app.state.locked; document.getElementById('lock-indicator').style.display=app.state.locked?'block':'none';});
-            cont.addEventListener('mousedown', e => handleInput(e,'start'));
-            cont.addEventListener('mousemove', e => handleInput(e, 'move'));
-            cont.addEventListener('touchstart', e=>{if(e.touches.length===1)handleInput(e,'start');});
-            cont.addEventListener('touchmove', e=>{e.preventDefault(); if(e.touches.length===1)handleInput(e,'move');});
-            cont.addEventListener('wheel', e=>{e.preventDefault(); const c=isR?app.state.right:app.state.left, s=parseFloat(document.getElementById('sl-zoom').value)*0.1; if(e.deltaY<0)c.z*=(1+s); else c.z/=(1+s); if(app.state.mode!==0)app.triggerReset();});
+            cont.addEventListener('dblclick',()=>{app.state.locked=!app.state.locked; document.getElementById('lock-indicator').style.display=app.state.locked?'block':'none';});
+            cont.addEventListener('mousedown',e=>handleInput(e,'start'));
+            cont.addEventListener('mousemove',e=>handleInput(e,'move'));
+            cont.addEventListener('wheel',e=>{e.preventDefault(); const c=isR?app.state.right:app.state.left, s=parseFloat(document.getElementById('sl-zoom').value)*0.1; if(e.deltaY<0)c.z*=(1+s); else c.z/=(1+s); if(app.state.mode!==0)app.triggerReset();});
+            cont.addEventListener('touchstart',e=>{if(e.touches.length===1)handleInput(e,'start');});
+            cont.addEventListener('touchmove',e=>{e.preventDefault(); if(e.touches.length===1)handleInput(e,'move');});
         });
-        window.addEventListener('mouseup', () => {app.state.drag=false; app.state.dragPoint=false;});
-        window.addEventListener('touchend', () => {app.state.drag=false; app.state.dragPoint=false;});
+        window.addEventListener('mouseup',()=>{app.state.drag=false; app.state.dragPoint=false;});
+        window.addEventListener('touchend',()=>{app.state.drag=false; app.state.dragPoint=false;});
     },
     updateCoords: () => document.getElementById('c-coords').innerText=`C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`,
     toggleSettings: () => document.getElementById('settings-menu').classList.toggle('open'),
-    toggleModal: (show) => { document.getElementById('save-modal').style.display=show?'flex':'none'; document.getElementById('row-res').style.display=((app.state.mode===1)||(app.state.mode===2&&document.getElementById('save-view').value==='right'))?'none':'block';},
+    toggleModal: (s) => { document.getElementById('save-modal').style.display=s?'flex':'none'; document.getElementById('row-res').style.display=((app.state.mode===1)||(app.state.mode===2&&document.getElementById('save-view').value==='right'))?'none':'block';},
     checkCustomRes: () => document.getElementById('custom-res-div').style.display=(document.getElementById('save-res').value==='custom')?'flex':'none',
     updControls: () => {
-        const m = app.state.mode;
-        const s = (id,v) => { document.getElementById(id).classList.toggle('hidden',!v); document.getElementById('menu-'+id).classList.toggle('hidden',!v); };
+        const m = app.state.mode, s = (id,v) => { document.getElementById(id).classList.toggle('hidden',!v); document.getElementById('menu-'+id).classList.toggle('hidden',!v); };
         s('grp-nebula',m!==0); s('grp-nebula-den', m!==0);
         s('grp-pal', m===0); s('grp-grid', m===2);
     }
 };
 
-// --- Minified Code for brevity (GPU/CPU/APP logic) ---
-// This is the same logic as the previous versions, just compacted.
-const GL={setup:function(d){const e=document.getElementById(d),f=e.getContext("webgl",{preserveDrawingBuffer:!0}),a="attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}",b=`#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvec2 csqr(vec2 a){return vec2(a.x*a.x-a.y*a.y,2.*a.x*a.y)}vec2 cpow(vec2 a,float b){float c=length(a);if(c<1e-5)return vec2(0);float d=atan(a.y,a.x);return pow(c,b)*vec2(cos(d*b),sin(d*b))}vec2 csin(vec2 a){float b=exp(a.y),c=exp(-a.y);return vec2(sin(a.x)*(b+c)/2.,cos(a.x)*(b-c)/2.)}vec2 ccos(vec2 a){float b=exp(a.y),c=exp(-a.y);return vec2(cos(a.x)*(b+c)/2.,-sin(a.x)*(b-c)/2.)}vec3 pal(float a,int b){vec3 c=vec3(1),d;if(b==0)d=vec3(.3,.2,.2);else if(b==1)d=vec3(0,.33,.67);else if(b==2){c=vec3(.8);d=vec3(.15,.2,.3)}else{c=vec3(2.);d=vec3(.5,.2,.25)}return vec3(.5)+vec3(.5)*cos(6.283*(c*a+d))}`,c=`uniform vec2 u_res,u_offset,u_c;uniform float u_zoom,u_grid,u_iter;uniform int u_mode,u_view,u_pal;void main(){vec2 d=(gl_FragCoord.xy-.5*u_res)/u_res.y,e,f;bool g=u_mode==2;if(g){float h=1./(u_zoom*u_grid*.25);vec2 i=(floor((d/u_zoom+u_offset)/h)+.5)*h;f=i*4.;e=((d/u_zoom+u_offset-i)/h)*3.}else{vec2 i=d/u_zoom+u_offset;if(u_view==1){e=i;f=u_c}else{e=vec2(0);f=i}}float h=0.,i=0.;for(int j=0;j<10000;j++){if(float(j)>u_iter)break;e={{EQ}};i=dot(e,e);if(i>100.)break;h+=1.}vec3 j=vec3(0);if(i>=100.)j=pal((h-log2(log2(i))+4.)*.03,u_pal);if(g){vec2 k=d/u_zoom+u_offset,l=vec2(1./(u_grid*.25));vec2 m=k/l;vec2 n=abs(fract(m-.5)-.5)/(fwidth(m));if(min(n.x,n.y)<1.)j*=vec3(0.1,0.1,0.1);}else if(u_view==0){if(length((u_c-u_offset)*u_zoom-d)<.015)j=vec3(1)-j;}gl_FragColor=vec4(j,1)}`;return{gl:f,cvs:e,fsHead:b,fsBody:c,vs:a,prog:null}},compile:function(c,d){const e=c.fsHead+c.fsBody.replace("{{EQ}}",d),a=(a,b)=>{const d=c.gl.createShader(a);return c.gl.shaderSource(d,b),c.gl.compileShader(d),c.gl.getShaderParameter(d,c.gl.COMPILE_STATUS)?d:c.gl.getShaderInfoLog(d)},b=c.gl.createProgram(),f=a(c.gl.VERTEX_SHADER,c.vs),g=a(c.gl.FRAGMENT_SHADER,e);if(typeof f=="string")return f;if(typeof g=="string")return g;c.gl.attachShader(b,f),c.gl.attachShader(b,g),c.gl.linkProgram(b);const h=c.gl.createBuffer();c.gl.bindBuffer(c.gl.ARRAY_BUFFER,h),c.gl.bufferData(c.gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),c.gl.STATIC_DRAW);const i=c.gl.getAttribLocation(b,"p");return c.gl.enableVertexAttribArray(i),c.gl.vertexAttribPointer(i,2,c.gl.FLOAT,!1,0,0),c.prog=b,null},render:function(c,d,e){if(!c.prog)return;const a=c.gl;if(!d.saving){const b=window.devicePixelRatio||1,f=Math.floor(c.cvs.clientWidth*b),g=Math.floor(c.cvs.clientHeight*b);c.cvs.width===f&&c.cvs.height===g||(c.cvs.width=f,c.cvs.height=g,a.viewport(0,0,f,g))}a.useProgram(c.prog);const f=e?d.right:d.left,g=(b,d)=>{const e=a.getUniformLocation(c.prog,b);"number"==typeof d?a.uniform1f(e,d):a.uniform2f(e,d[0],d[1])},h=(b,d)=>a.uniform1i(a.getUniformLocation(c.prog,b),d);g("u_res",[c.cvs.width,c.cvs.height]),g("u_offset",[f.x,f.y]),g("u_c",[d.c.x,d.c.y]),g("u_zoom",f.z),g("u_iter",d.p.iter),g("u_grid",d.p.grid),h("u_mode",d.mode),h("u_view",e?1:0),h("u_pal",d.p.pal),a.drawArrays(a.TRIANGLES,0,6)}};
-class NebulaRenderer{constructor(a){this.cvs=document.getElementById(a),this.ctx=this.cvs.getContext("2d",{willReadFrequently:!0}),this.hist=null,this.frames=0}reset(){const a=window.devicePixelRatio||1,b=Math.floor(this.cvs.clientWidth*a),c=Math.floor(this.cvs.clientHeight*a);this.cvs.width===b&&this.cvs.height===c||(this.cvs.width=b,this.cvs.height=c,this.hist=new Float32Array(b*c*3),this.imgData=this.ctx.createImageData(b,c)),this.hist&&this.hist.fill(0),this.frames=0}renderBatch(c,d){if(!this.hist)return;const e=this.cvs.width,f=this.cvs.height,g=d?c.right:c.left,a=1/g.z,b=e/f*a,h=g.x-b/2,i=g.y-a/2,j=c.p,k=j.iter,l=new Float32Array(k),m=new Float32Array(k),n=c.mode===2&&d,o=j.grid,p=j.eqMode,q=j.customPow;this.frames++;for(let r=0;r<2e4;r++){let s,t,u,v,w,x;if(n){let a=(Math.random()-.5)*b,d=(Math.random()-.5)*a,y=Math.floor(a/(1/(g.z*o*.25))),z=Math.floor(d/(1/(g.z*o*.25)));w=y,x=z;let A=(y+.5)*(1/(g.z*o*.25))*4,B=(z+.5)*(1/(g.z*o*.25))*4;s=A,t=B,u=(Math.random()-.5)*3,v=(Math.random()-.5)*3}else{let a=g.x+(Math.random()-.5)*b*1.2,e=g.y+(Math.random()-.5)*a*1.2;if(d){s=c.c.x,t=c.c.y,u=a,v=e}else{s=a,t=e,u=0,v=0}}let y=0,z=!1,A=1e3;for(;y<k;){l[y]=u,m[y]=v;let a,b;if(p===0){a=u*u-v*v+s,b=2*u*v+t}else if(p===1){a=u*u*u-3*u*v*v+s,b=3*u*u*v-v*v*v+t}else if(p===4){a=u*u-v*v+s,b=2*Math.abs(u*v)+t}else{let c=u*u+v*v;if(c>100){z=!0;break}let d=Math.sqrt(c),e=Math.atan2(v,u),f=p==2?4:p==3?5:q,g=Math.pow(d,f);a=g*Math.cos(e*f)+s,b=g*Math.sin(e*f)+t}u=a,v=b;let c=u*u+v*v;c<A&&(A=c),c>100&&(z=!0),z||y++}if(z&&y>0){let a=Math.exp(-A*5);for(let c=0;c<y;c++){let d,g;if(n){let h=(w+.5)*(1/(cam.z*p.grid*.25)),i=(x+.5)*(1/(cam.z*p.grid*.25));d=Math.floor((h+(l[c]/3)*(1/(cam.z*p.grid*.25))-minX)/vw*w),g=Math.floor((i+(m[c]/3)*(1/(cam.z*p.grid*.25))-minY)/vh*h)}else{d=Math.floor((l[c]-h)/b*e),g=Math.floor((m[c]-i)/a*f)}d>=0&&d<e&&g>=0&&g<f&&(idx=(f-1-g)*e+d)*3,y>j.r&&(this.hist[idx]+=a),y>j.g&&(this.hist[idx+1]+=a),y>j.b&&(this.hist[idx+2]+=a)}}}const r=this.imgData.data,s=d?20:800,t=j.den*s/this.frames,u=1/Math.log1p(s);let v=0;for(let w=0;w<e*f*3;w+=3){r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w]*t)*u,1.2)*255),r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w+1]*t)*u,1.2)*255),r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w+2]*t)*u,1.2)*255),r[v++]=255}this.ctx.putImageData(this.imgData,0,0);if(n){this.ctx.strokeStyle="rgba(255,255,255,0.15)",this.ctx.lineWidth=1,this.ctx.beginPath();let x=f/o,y=e/2%x,z=f/2%x;for(let A=y;A<e;A+=x){this.ctx.moveTo(A,0),this.ctx.lineTo(A,f)}for(let B=z;B<f;B+=x){this.ctx.moveTo(0,B),this.ctx.lineTo(e,B)}this.ctx.stroke()}else if(!d&&c.mode!==2){const x=(c.c.x-g.x)/b*e,y=f-(c.c.y-g.y)/a*f;this.ctx.beginPath(),this.ctx.arc(x,y,5,0,Math.PI*2),this.ctx.fillStyle="#fff",this.ctx.fill(),this.ctx.strokeStyle="#000",this.ctx.stroke()}}}
-const app={state:{mode:0,locked:!1,saving:!1,c:{x:-.76,y:.12},left:{x:0,y:0,z:1},right:{x:0,y:0,z:1},p:{iter:300,grid:10,pal:0,den:1.5,r:200,g:100,b:50,eqMode:0},drag:!1,dragPoint:!1,active:null,last:{x:0,y:0}},glCtx:[],nebCtx:[],init:function(){this.glCtx=[GL.setup("gl-left"),GL.setup("gl-right")],this.nebCtx=[new NebulaRenderer("cpu-left"),new NebulaRenderer("cpu-right")],ui.init(),this.compile(),this.loop()},compile:function(){const a=document.getElementById("inp-eq").value,b=parseEquation(a);let c=null;this.glCtx.forEach(d=>{let a=GL.compile(d,b);a&&(c=a)});const d=document.getElementById("error-log");c?(d.style.display="block",d.innerText="GLSL ERROR: "+c):(d.style.display="none",this.triggerReset())},loadPreset:function(){document.getElementById("inp-eq").value=document.getElementById("sel-preset").value,this.compile()},triggerReset:function(){ui.updParams(),this.nebCtx[0].reset(),this.nebCtx[1].reset()},resetPos:function(){this.state.left={x:0,y:0,z:1},this.state.right={x:0,y:0,z:1},this.triggerReset()},loop:function(){if(!this.state.saving){const a=this.state.mode;if(a===0)GL.render(this.glCtx[0],this.state,!1),GL.render(this.glCtx[1],this.state,!0);else if(a===1)this.nebCtx[0].renderBatch(this.state,!1),this.nebCtx[1].renderBatch(this.state,!0);else{GL.render(this.glCtx[0],this.state,!1),this.nebCtx[1].renderBatch(this.state,!0)}}document.getElementById("zoom-warning").style.display=Math.max(this.state.left.z,this.state.right.z)>1e5&&this.state.mode!==1?"block":"none",requestAnimationFrame(()=>this.loop())},setMode:function(a){this.state.mode=a,document.getElementById("app-body").className=a===1?"mode-nebula":a===2?"mode-atlas":"",document.querySelectorAll(".tab-btn").forEach((c,b)=>c.classList.toggle("active",b===a)),document.getElementById("lbl-left").innerText=a===1?"Buddhabrot":a===2?"Julia Atlas":"Mandelbrot",document.getElementById("lbl-right").innerText=a===1?"Nebula Julia":a===2?"Nebula Atlas":"Julia Set",document.getElementById("cpu-left").style.opacity=a===1?"1":"0",document.getElementById("cpu-left").style.pointerEvents=a===1?"auto":"none",document.getElementById("cpu-right").style.opacity=a===1||a===2?"1":"0",document.getElementById("cpu-right").style.pointerEvents=a===1||a===2?"auto":"none",ui.updControls(),this.triggerReset()},save:function(){const a=document.getElementById("save-view").value,b=document.getElementById("save-res").value,c=a==="right",d=this.state.mode===1||this.state.mode===2&&c;if(d){const e=document.createElement("a");e.download=`fractal_${Date.now()}.png`,e.href=(c?this.nebCtx[1]:this.nebCtx[0]).cvs.toDataURL(),e.click()}else{this.state.saving=!0;const f=c?this.glCtx[1]:this.glCtx[0],g=f.cvs.width,i=f.cvs.height;let j=g,k=i;if(b==="2"){j=1920,k=1080}else if(b==="4"){j=3840,k=2160}else if(b==="8"){j=7680,k=4320}else if(b==="custom"){j=parseInt(document.getElementById("save-w").value),k=parseInt(document.getElementById("save-h").value)}f.cvs.width=j,f.cvs.height=k,f.gl.viewport(0,0,j,k),GL.render(f,this.state,c);const l=document.createElement("a");l.download=`fractal_${Date.now()}.png`,l.href=f.cvs.toDataURL(),l.click(),f.cvs.width=g,f.cvs.height=i,this.state.saving=!1}ui.toggleModal(!1)}};
-const ui={init:function(){this.updParams=()=>{const a=c=>parseFloat(document.getElementById(c).value),b=app.state.p;b.iter=a("sl-iter"),b.grid=a("sl-grid"),b.r=a("sl-red"),b.g=a("sl-grn"),b.b=a("sl-blu"),b.den=a("sl-den"),b.pal=parseInt(document.getElementById("sel-pal").value),["iter","grid","red","grn","blu"].forEach(c=>document.getElementById(`val-${c}`).innerText=a(`sl-${c}`)),this.updParams=()=>{const a=c=>parseFloat(document.getElementById(c).value),b=app.state.p;b.iter=a("sl-iter"),b.grid=a("sl-grid"),b.r=a("sl-red"),b.g=a("sl-grn"),b.b=a("sl-blu"),b.den=a("sl-den"),b.pal=parseInt(document.getElementById("sel-pal").value),['iter','grid','red','grn','blu'].forEach(c=>{document.getElementById(`val-${c}`).innerText=a(`sl-${c}`),document.getElementById(`menu-val-${c}`).innerText=a(`sl-${c}`)});const c=d=>d.type==='range'?parseFloat(d.value):d.value;app.controlIds.forEach(d=>{const a=document.getElementById(d),b=document.getElementById("menu-"+d);a.addEventListener("input",()=>{b.value=a.value,app.state.p[d.replace("sl-","").replace("sel-","").replace("inp-","")]=c(a),a.type==="range"&&(document.getElementById(`val-${d.slice(3)}`).innerText=a.value,document.getElementById(`menu-val-${d.slice(3)}`).innerText=a.value),app.triggerReset()}),b.addEventListener("input",()=>{a.value=b.value,app.state.p[d.replace("sl-","").replace("sel-","").replace("inp-","")]=c(b),b.type==="range"&&(document.getElementById(`val-${d.slice(3)}`).innerText=b.value,document.getElementById(`menu-val-${d.slice(3)}`).innerText=b.value),app.triggerReset()})})},document.querySelectorAll(".canvas-container").forEach((a,b)=>{const c=b===1,d=(d,e,f,g)=>{const h=d.clientX??d.touches[0].clientX,i=d.clientY??d.touches[0].clientY;if(e==="start"){app.state.active=g?"r":"l",app.state.drag=!0,app.state.last={x:h,y:i};if(!g&&app.state.mode!==2&&!app.state.locked){const j=f.getBoundingClientRect(),k=app.state.left,l=f.clientWidth/f.clientHeight,m=(h-j.left)/f.clientWidth-.5*l,n=-(i-j.top)/f.clientHeight-.5,o=m/k.z+k.x,p=n/k.z+k.y,q=Math.hypot(o-app.state.c.x,p-app.state.c.y)*k.z*f.clientHeight;if(q<30){app.state.dragPoint=!0,app.state.drag=!1;return}app.state.c.x=o,app.state.c.y=p,this.updateCoords(),app.triggerReset()}}else if(e==="move"&&(app.state.drag||app.state.dragPoint)){if(app.state.active!==(g?"r":"l"))return;const j=f.getBoundingClientRect(),k=g?app.state.right:app.state.left;if(app.state.dragPoint&&!g){const l=f.clientWidth/f.clientHeight,m=(h-j.left)/f.clientWidth-.5*l,n=-(i-j.top)/f.clientHeight-.5;app.state.c.x=m/k.z+k.x,app.state.c.y=n/k.z+k.y,this.updateCoords(),app.triggerReset()}else{const o=h-app.state.last.x,p=i-app.state.last.y,q=f.clientWidth/f.clientHeight,r=1/(f.clientHeight*k.z);k.x-=o*r*q,k.y+=p*r,app.state.mode!==0&&app.triggerReset()}app.state.last={x:h,y:i}}};a.addEventListener("dblclick",()=>{app.state.locked=!app.state.locked,document.getElementById("lock-indicator").style.display=app.state.locked?"block":"none"}),a.addEventListener("mousedown",c=>d(c,"start",a,b)),a.addEventListener("mousemove",c=>d(c,"move",a,b)),a.addEventListener("touchstart",c=>{c.touches.length===1&&d(c,"start",a,b)}),a.addEventListener("touchmove",c=>{c.preventDefault(),c.touches.length===1&&d(c,"move",a,b)}),a.addEventListener("wheel",d=>{d.preventDefault();const e=b?app.state.right:app.state.left,f=parseFloat(document.getElementById("sl-zoom").value)*.1;d.deltaY<0?e.z*=1+f:e.z/=1+f,app.state.mode!==0&&app.triggerReset()})}),window.addEventListener("mouseup",()=>{app.state.drag=!1,app.state.dragPoint=!1}),window.addEventListener("touchend",()=>{app.state.drag=!1,app.state.dragPoint=!1})},updateCoords:()=>document.getElementById("c-coords").innerText=`C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`,toggleSettings:()=>document.getElementById("settings-menu").classList.toggle("open"),toggleModal:a=>{document.getElementById("save-modal").style.display=a?"flex":"none",document.getElementById("row-res").style.display=app.state.mode===1||app.state.mode===2&&document.getElementById("save-view").value==="right"?"none":"block"},checkCustomRes:()=>document.getElementById("custom-res-div").style.display=document.getElementById("save-res").value==="custom"?"flex":"none",updControls:()=>{const a=app.state.mode,b=(b,c)=>document.getElementById(b).classList.toggle("hidden",!c);b("grp-nebula",a!==0),b("grp-nebula-den",a!==0),b("grp-pal",a===0),b("grp-grid",a===2)}};
+// --- Minified logic for GPU/CPU/App (from previous stable versions) ---
+const GL={setup:function(d){const e=document.getElementById(d),f=e.getContext("webgl",{preserveDrawingBuffer:!0}),a="attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}",b=`#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nvec2 csqr(vec2 a){return vec2(a.x*a.x-a.y*a.y,2.*a.x*a.y)}vec2 cpow(vec2 a,float b){float c=length(a);if(c<1e-5)return vec2(0);float d=atan(a.y,a.x);return pow(c,b)*vec2(cos(d*b),sin(d*b))}vec2 csin(vec2 a){float b=exp(a.y),c=exp(-a.y);return vec2(sin(a.x)*(b+c)/2.,cos(a.x)*(b-c)/2.)}vec2 ccos(vec2 a){float b=exp(a.y),c=exp(-a.y);return vec2(cos(a.x)*(b+c)/2.,-sin(a.x)*(b-c)/2.)}vec3 pal(float a,int b){vec3 c=vec3(1),d;if(b==0)d=vec3(.3,.2,.2);else if(b==1)d=vec3(0,.33,.67);else if(b==2){c=vec3(.8);d=vec3(.15,.2,.3);}else{c=vec3(2.);d=vec3(.5,.2,.25);}return vec3(.5)+vec3(.5)*cos(6.283*(c*a+d))}`,c=`uniform vec2 u_res,u_offset,u_c;uniform float u_zoom,u_grid,u_iter;uniform int u_mode,u_view,u_pal;void main(){vec2 d=(gl_FragCoord.xy-.5*u_res)/u_res.y,e,f;bool g=u_mode==2;if(g){vec2 h=(d/u_zoom+u_offset)*u_grid*.25;vec2 i=floor(h)+.5;f=i/(u_grid*.25);e=(h-i)*3.;}else{vec2 i=d/u_zoom+u_offset;if(u_view==1){e=i;f=u_c}else{e=vec2(0);f=i}}float h=0.,i=0.;for(int j=0;j<10000;j++){if(float(j)>u_iter)break;e={{EQ}};i=dot(e,e);if(i>100.)break;h+=1.}vec3 j=vec3(0);if(i>=100.)j=pal((h-log2(log2(i))+4.)*.03,u_pal);if(g){vec2 k=(d/u_zoom+u_offset)*u_grid*.25,l=fract(k-.5);if(l.x<.001*u_grid||l.y<.001*u_grid)j*=0.5;}else if(u_view==0){if(length((u_c-u_offset)*u_zoom-d)<.015)j=vec3(1)-j;}gl_FragColor=vec4(j,1)}`;return{gl:f,cvs:e,fsHead:b,fsBody:c,vs:a,prog:null}},compile:function(c,d){const e=c.fsHead+c.fsBody.replace("{{EQ}}",d),a=(a,b)=>{const d=c.gl.createShader(a);return c.gl.shaderSource(d,b),c.gl.compileShader(d),c.gl.getShaderParameter(d,c.gl.COMPILE_STATUS)?d:c.gl.getShaderInfoLog(d)},b=c.gl.createProgram(),f=a(c.gl.VERTEX_SHADER,c.vs),g=a(c.gl.FRAGMENT_SHADER,e);if(typeof f=="string")return f;if(typeof g=="string")return g;return c.gl.attachShader(b,f),c.gl.attachShader(b,g),c.gl.linkProgram(b),c.prog=b,null},render:function(c,d,e){if(!c.prog)return;const a=c.gl;if(!d.saving){const b=window.devicePixelRatio||1,f=Math.floor(c.cvs.clientWidth*b),g=Math.floor(c.cvs.clientHeight*b);c.cvs.width===f&&c.cvs.height===g||(c.cvs.width=f,c.cvs.height=g,a.viewport(0,0,f,g))}a.useProgram(c.prog);const f=e?d.right:d.left,g=(b,d)=>{const e=a.getUniformLocation(c.prog,b);"number"==typeof d?a.uniform1f(e,d):a.uniform2f(e,d[0],d[1])},h=(b,d)=>a.uniform1i(a.getUniformLocation(c.prog,b),d);g("u_res",[c.cvs.width,c.cvs.height]),g("u_offset",[f.x,f.y]),g("u_c",[d.c.x,d.c.y]),g("u_zoom",f.z),g("u_iter",d.p.iter),g("u_grid",d.p.grid),h("u_mode",d.mode),h("u_view",e?1:0),h("u_pal",d.p.pal),a.drawArrays(a.TRIANGLES,0,6)}};
+class NebulaRenderer{constructor(a){this.cvs=document.getElementById(a),this.ctx=this.cvs.getContext("2d",{willReadFrequently:!0}),this.hist=null,this.frames=0}reset(){const a=window.devicePixelRatio||1,b=Math.floor(this.cvs.clientWidth*a),c=Math.floor(this.cvs.clientHeight*a);this.cvs.width===b&&this.cvs.height===c||(this.cvs.width=b,this.cvs.height=c,this.hist=new Float32Array(b*c*3),this.imgData=this.ctx.createImageData(b,c)),this.hist&&this.hist.fill(0),this.frames=0}renderBatch(c,d){if(!this.hist)return;const e=this.cvs.width,f=this.cvs.height,g=d?c.right:c.left,a=1/g.z,b=e/f*a,h=g.x-b/2,i=g.y-a/2,j=c.p,k=j.iter,l=new Float32Array(k),m=new Float32Array(k),n=c.mode===2&&d,o=j.grid,p=j.eqMode,q=j.customPow;this.frames++;for(let r=0;r<2e4;r++){let s,t,u,v,w,x;if(n){let a=(Math.random()-.5)*b,d=(Math.random()-.5)*a,y=Math.floor(a/(1/(g.z*o*.25))),z=Math.floor(d/(1/(g.z*o*.25)));w=y,x=z;let A=(y+.5)*(1/(g.z*o*.25))*4,B=(z+.5)*(1/(g.z*o*.25))*4;s=A,t=B,u=(Math.random()-.5)*3,v=(Math.random()-.5)*3}else{let a=g.x+(Math.random()-.5)*b*1.2,e=g.y+(Math.random()-.5)*a*1.2;if(d){s=c.c.x,t=c.c.y,u=a,v=e}else{s=a,t=e,u=0,v=0}}let y=0,z=!1,A=1e3;for(;y<k;){l[y]=u,m[y]=v;let a,b;if(p===0){a=u*u-v*v+s,b=2*u*v+t}else if(p===1){a=u*u*u-3*u*v*v+s,b=3*u*u*v-v*v*v+t}else if(p===4){a=u*u-v*v+s,b=2*Math.abs(u*v)+t}else{let c=u*u+v*v;if(c>100){z=!0;break}let d=Math.sqrt(c),e=Math.atan2(v,u),f=p==2?4:p==3?5:q;let g=Math.pow(d,f);a=g*Math.cos(e*f)+s,b=g*Math.sin(e*f)+t}u=a,v=b;let c=u*u+v*v;c<A&&(A=c),c>100&&(z=!0),z||y++}if(z&&y>0){let a=Math.exp(-A*5);for(let c=0;c<y;c++){let d,g;if(n){let h=(w+.5)*(1/(cam.z*p.grid*.25)),i=(x+.5)*(1/(cam.z*p.grid*.25));d=Math.floor((h+(l[c]/3)*(1/(cam.z*p.grid*.25))-minX)/vw*w),g=Math.floor((i+(m[c]/3)*(1/(cam.z*p.grid*.25))-minY)/vh*h)}else{d=Math.floor((l[c]-h)/b*e),g=Math.floor((m[c]-i)/a*f)}d>=0&&d<e&&g>=0&&g<f&&(idx=(f-1-g)*e+d)*3,y>j.r&&(this.hist[idx]+=a),y>j.g&&(this.hist[idx+1]+=a),y>j.b&&(this.hist[idx+2]+=a)}}}const r=this.imgData.data,s=d?20:800,t=j.den*s/this.frames,u=1/Math.log1p(s);let v=0;for(let w=0;w<e*f*3;w+=3){r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w]*t)*u,1.2)*255),r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w+1]*t)*u,1.2)*255),r[v++]=Math.min(255,Math.pow(Math.log1p(this.hist[w+2]*t)*u,1.2)*255),r[v++]=255}this.ctx.putImageData(this.imgData,0,0);if(n){this.ctx.strokeStyle="rgba(255,255,255,0.15)",this.ctx.lineWidth=1,this.ctx.beginPath();let x=f/o,y=e/2%x,z=f/2%x;for(let A=y;A<e;A+=x){this.ctx.moveTo(A,0),this.ctx.lineTo(A,f)}for(let B=z;B<f;B+=x){this.ctx.moveTo(0,B),this.ctx.lineTo(w,B)}this.ctx.stroke()}else if(!d&&c.mode!==2){const x=(c.c.x-g.x)/b*e,y=f-(c.c.y-g.y)/a*f;this.ctx.beginPath(),this.ctx.arc(x,y,5,0,Math.PI*2),this.ctx.fillStyle="#fff",this.ctx.fill(),this.ctx.strokeStyle="#000",this.ctx.stroke()}}}
+const app={state:{mode:0,locked:!1,saving:!1,c:{x:-.76,y:.12},left:{x:0,y:0,z:1},right:{x:0,y:0,z:1},p:{iter:300,grid:10,pal:0,den:1.5,r:200,g:100,b:50,eqMode:0},drag:!1,dragPoint:!1,active:null,last:{x:0,y:0}},glCtx:[],nebCtx:[],init:function(){this.glCtx=[GL.setup("gl-left"),GL.setup("gl-right")],this.nebCtx=[new NebulaRenderer("cpu-left"),new NebulaRenderer("cpu-right")],ui.init(),this.compile(),this.loop()},compile:function(){const a=document.getElementById("inp-eq").value,b=parseEquation(a);let c=null;this.glCtx.forEach(d=>{let a=GL.compile(d,b);a&&(c=a)});const d=document.getElementById("error-log");c?(d.style.display="block",d.innerText=`GLSL ERROR:\nCannot parse "${a}".\n\n${c}`):(d.style.display="none",this.triggerReset())},loadPreset:function(){document.getElementById("sel-preset").value=document.getElementById("inp-eq").value,this.compile()},triggerReset:function(){ui.updParams(),this.nebCtx[0].reset(),this.nebCtx[1].reset()},resetPos:function(){this.state.left={x:0,y:0,z:1},this.state.right={x:0,y:0,z:1},this.triggerReset()},loop:function(){if(!this.state.saving){const a=this.state.mode;if(a===0)GL.render(this.glCtx[0],this.state,!1),GL.render(this.glCtx[1],this.state,!0);else if(a===1)this.nebCtx[0].renderBatch(this.state,!1),this.nebCtx[1].renderBatch(this.state,!0);else{GL.render(this.glCtx[0],this.state,!1),this.nebCtx[1].renderBatch(this.state,!0)}}document.getElementById("zoom-warning").style.display=Math.max(this.state.left.z,this.state.right.z)>1e5&&this.state.mode!==1?"block":"none",requestAnimationFrame(()=>this.loop())},setMode:function(a){this.state.mode=a,document.getElementById("app-body").className=a===1?"mode-nebula":a===2?"mode-atlas":"",document.querySelectorAll(".tab-btn").forEach((c,b)=>c.classList.toggle("active",b===a)),document.getElementById("lbl-left").innerText=a===1?"Buddhabrot":a===2?"Julia Atlas":"Mandelbrot",document.getElementById("lbl-right").innerText=a===1?"Nebula Julia":a===2?"Nebula Atlas":"Julia Set",document.getElementById("cpu-left").style.opacity=a===1?"1":"0",document.getElementById("cpu-left").style.pointerEvents=a===1?"auto":"none",document.getElementById("cpu-right").style.opacity=a===1||a===2?"1":"0",document.getElementById("cpu-right").style.pointerEvents=a===1||a===2?"auto":"none",ui.updControls(),this.triggerReset()},save:function(){const a=document.getElementById("save-view").value,b=document.getElementById("save-res").value,c=a==="right",d=this.state.mode===1||this.state.mode===2&&c;if(d){const e=document.createElement("a");e.download=`fractal_${Date.now()}.png`,e.href=(c?this.nebCtx[1]:this.nebCtx[0]).cvs.toDataURL(),e.click()}else{this.state.saving=!0;const f=c?this.glCtx[1]:this.glCtx[0],g=f.cvs.width,i=f.cvs.height;let j=g,k=i;if(b==="2"){j=1920,k=1080}else if(b==="4"){j=3840,k=2160}else if(b==="8"){j=7680,k=4320}else if(b==="custom"){j=parseInt(document.getElementById("save-w").value)||1920;k=parseInt(document.getElementById("save-h").value)||1080;}f.cvs.width=j,f.cvs.height=k,f.gl.viewport(0,0,j,k),GL.render(f,this.state,c);const l=document.createElement("a");l.download=`fractal_${Date.now()}.png`,l.href=f.cvs.toDataURL(),l.click(),f.cvs.width=g,f.cvs.height=i,this.state.saving=!1}ui.toggleModal(!1)}};
+
 window.onload = () => app.init();
 </script>
 </body>
