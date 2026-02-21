@@ -3,162 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Atlas - Infinity</title>
+    <title>Fractal Atlas - Architect</title>
     <style>
         :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
-        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: monospace; user-select: none; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; user-select: none; }
 
-        /* LAYOUT */
-        #app-root { display: flex; flex-direction: column; height: 100vh; }
-        
         /* HEADER */
-        header { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #080808; border-bottom: 1px solid #333; }
-        #back-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-        .mode-tabs { display: flex; gap: 5px; }
-        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        header { height: 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: #080808; border-bottom: 1px solid #333; }
+        #back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding-right: 15px;}
+        .mode-tabs { display: flex; gap: 8px; }
+        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 6px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; letter-spacing: 0.5px;}
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
         /* VIEWPORT */
-        #viewport { flex: 1; display: flex; position: relative; }
+        #viewport { display: flex; height: calc(100vh - 205px); width: 100%; position: relative; }
         .canvas-container { flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden; }
         canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
         .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; }
 
         /* OVERLAYS */
-        #bottom-bar { position: absolute; bottom: 170px; left: 10px; pointer-events: none; display: flex; gap: 10px; }
-        .info-tag { background: rgba(0,0,0,0.8); padding: 5px 10px; font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: auto; }
-        #lock-indicator { display: none; color: var(--danger); border-color: var(--danger); font-weight: bold; }
+        #bottom-bar { position: absolute; bottom: 170px; left: 10px; pointer-events: none; display: flex; gap: 10px; z-index: 10;}
+        .info-tag { background: rgba(0,0,0,0.8); padding: 6px 12px; font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: auto; }
+        #lock-indicator { display: none; color: var(--success); border-color: var(--success); font-weight: bold; background: rgba(0,255,136,0.1);}
         
-        #error-log { display: none; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); background: #500; color: white; padding: 15px; border: 2px solid red; font-size: 11px; white-space: pre-wrap; z-index: 999; width: 80%; }
+        #error-log { display: none; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); background: #500; color: white; padding: 15px; border: 2px solid red; font-size: 12px; z-index: 999; border-radius: 4px;}
 
         /* CONTROLS */
-        #controls { height: 160px; background: #080808; border-top: 1px solid #333; padding: 10px; overflow-y: auto; }
-        .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; align-items: start; }
+        #controls { height: 160px; background: #080808; border-top: 1px solid #333; padding: 10px 15px; overflow-y: auto; }
+        .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; align-items: start; }
         .control-group { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 10px; color: #aaa; text-transform: uppercase; font-weight: bold; }
         
         input[type="range"] { width: 100%; height: 6px; background: #333; appearance: none; border-radius: 3px; cursor: pointer; }
         input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
         
-        select, input[type="text"] { background: #222; color: #eee; border: 1px solid #444; padding: 5px; border-radius: 3px; font-size: 11px; width: 100%; font-family: monospace; }
+        select, input[type="text"] { background: #222; color: #eee; border: 1px solid #444; padding: 6px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; font-family: monospace;}
         
         .val-disp { font-size: 10px; color: var(--accent); float: right; }
         .lbl-r { color: #ff6b6b; } .lbl-g { color: #51cf66; } .lbl-b { color: #339af0; }
         .hidden { display: none !important; }
 
-        .action-btn { background: #333; color: white; border: 1px solid #555; padding: 6px 12px; cursor: pointer; border-radius: 3px; font-size: 11px; font-weight: bold; }
+        .action-btn { background: #333; color: white; border: 1px solid #555; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold; }
         .action-btn:hover { background: #555; }
 
         /* SAVE MODAL */
-        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-box { background: #151515; border: 1px solid #444; padding: 20px; width: 300px; border-radius: 6px; }
+        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-box { background: #151515; border: 1px solid #444; padding: 25px; width: 320px; border-radius: 8px; }
         .modal-row { margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-<div id="app-root">
-    <header>
-        <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
-        <div class="mode-tabs">
-            <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
-            <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
-            <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
-        </div>
-        <div style="flex:1"></div>
-        <button class="action-btn" onclick="ui.toggleModal(true)">SAVE VIEW</button>
-    </header>
-
-    <div id="error-log"></div>
-
-    <div id="viewport">
-        <div class="canvas-container">
-            <div class="view-label" id="lbl-left">Mandelbrot</div>
-            <canvas id="cvs-left"></canvas>
-        </div>
-        <div class="canvas-container">
-            <div class="view-label" id="lbl-right">Julia</div>
-            <canvas id="cvs-right"></canvas>
-        </div>
+<header>
+    <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
+    <div class="mode-tabs">
+        <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
+        <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
+        <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
     </div>
+    <div style="flex:1"></div>
+    <button class="action-btn" onclick="ui.toggleModal(true)">SAVE VIEW</button>
+</header>
 
-    <div id="bottom-bar">
-        <div class="info-tag" id="c-coords">C: -0.7600, 0.1200</div>
-        <div class="info-tag" id="lock-indicator">LOCKED</div>
+<div id="error-log"></div>
+
+<div id="viewport">
+    <div class="canvas-container">
+        <div class="view-label" id="lbl-left">Mandelbrot</div>
+        <canvas id="cvs-left"></canvas>
     </div>
+    <div class="canvas-container">
+        <div class="view-label" id="lbl-right">Julia</div>
+        <canvas id="cvs-right"></canvas>
+    </div>
+</div>
 
-    <div id="controls">
-        <div class="ctrl-grid">
-            
-            <!-- Equation Engine -->
-            <div class="control-group" style="grid-column: span 2;">
-                <label>Fractal Equation Library</label>
-                <div style="display:flex; gap: 5px;">
-                    <select id="sel-preset" style="width: 120px;" onchange="app.loadPreset()">
-                        <option value="csqr(z)+c">Mandelbrot (z^2)</option>
-                        <option value="cpow(z,3.0)+c">Cubic (z^3)</option>
-                        <option value="cpow(z,4.0)+c">Quartic (z^4)</option>
-                        <option value="cpow(z,5.0)+c">Quintic (z^5)</option>
-                        <option value="vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y),2.0*z.x*z.y)+c">Burning Ship</option>
-                        <option value="csqr(vec2(z.x,-z.y))+c">Tricorn</option>
-                        <option value="csin(z)+c">Sine (sin(z))</option>
-                    </select>
-                    <input type="text" id="inp-eq" value="csqr(z)+c">
-                    <button class="action-btn" onclick="app.compile()">UPDATE</button>
-                </div>
-            </div>
+<div id="bottom-bar">
+    <div class="info-tag" id="c-coords">C: -0.7600, 0.1200</div>
+    <div class="info-tag" id="lock-indicator" title="Double click canvas to unlock">🔒 SEED LOCKED</div>
+</div>
 
-            <!-- Iterations (Max 10k) -->
-            <div class="control-group">
-                <label>Max Iterations <span id="val-iter" class="val-disp">300</span></label>
-                <input type="range" id="sl-iter" min="50" max="10000" value="300">
-            </div>
-
-            <!-- Zoom -->
-            <div class="control-group">
-                <label>Zoom Speed</label>
-                <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
-            </div>
-
-            <!-- Nebula Only -->
-            <div class="control-group hidden" id="grp-neb-r">
-                <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
-                <input type="range" id="sl-red" min="0" max="1000" value="200">
-            </div>
-            <div class="control-group hidden" id="grp-neb-g">
-                <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
-                <input type="range" id="sl-grn" min="0" max="1000" value="100">
-            </div>
-            <div class="control-group hidden" id="grp-neb-b">
-                <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
-                <input type="range" id="sl-blu" min="0" max="1000" value="50">
-            </div>
-            <div class="control-group hidden" id="grp-neb-den">
-                <label>Nebula Brightness</label>
-                <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
-            </div>
-
-            <!-- Standard Only -->
-            <div class="control-group" id="grp-pal">
-                <label>Palette</label>
-                <select id="sel-pal" onchange="app.updateParams()">
-                    <option value="0">Magma</option>
-                    <option value="1">Viridis</option>
-                    <option value="2">Ice</option>
-                    <option value="3">Electric</option>
+<div id="controls">
+    <div class="ctrl-grid">
+        
+        <!-- Human Readable Equation -->
+        <div class="control-group" style="grid-column: span 2;">
+            <label>Fractal Equation</label>
+            <div style="display:flex; gap: 5px;">
+                <select id="sel-preset" style="width: 140px;" onchange="app.loadPreset()">
+                    <option value="z^2 + c">Mandelbrot (z²)</option>
+                    <option value="z^3 + c">Cubic (z³)</option>
+                    <option value="z^4 + c">Quartic (z⁴)</option>
+                    <option value="z^5 + c">Quintic (z⁵)</option>
+                    <option value="burningship">Burning Ship</option>
+                    <option value="tricorn">Tricorn</option>
+                    <option value="sin(z) + c">Sine Fractal</option>
                 </select>
+                <input type="text" id="inp-eq" value="z^2 + c">
+                <button class="action-btn" style="background:var(--accent); color:#000;" onclick="app.compile()">UPDATE</button>
             </div>
+        </div>
 
-            <!-- Atlas Only (Grid 500) -->
-            <div class="control-group hidden" id="grp-grid">
-                <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
-                <input type="range" id="sl-grid" min="2" max="500" value="10">
-            </div>
+        <div class="control-group">
+            <label>Max Iterations <span id="val-iter" class="val-disp">300</span></label>
+            <input type="range" id="sl-iter" min="50" max="10000" value="300">
+        </div>
 
-            <div class="control-group">
-                <label>&nbsp;</label>
-                <button class="action-btn" style="width:100%" onclick="app.resetPos()">RESET POSITION</button>
-            </div>
+        <div class="control-group">
+            <label>Zoom Speed</label>
+            <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
+        </div>
+
+        <!-- Nebula Only -->
+        <div class="control-group hidden" id="grp-neb-r">
+            <label class="lbl-r">Red Minimum Iterations <span id="val-red" class="val-disp">200</span></label>
+            <input type="range" id="sl-red" min="0" max="1000" value="200">
+        </div>
+        <div class="control-group hidden" id="grp-neb-g">
+            <label class="lbl-g">Green Minimum Iterations <span id="val-grn" class="val-disp">100</span></label>
+            <input type="range" id="sl-grn" min="0" max="1000" value="100">
+        </div>
+        <div class="control-group hidden" id="grp-neb-b">
+            <label class="lbl-b">Blue Minimum Iterations <span id="val-blu" class="val-disp">50</span></label>
+            <input type="range" id="sl-blu" min="0" max="1000" value="50">
+        </div>
+        <div class="control-group hidden" id="grp-neb-den">
+            <label>Nebula Brightness</label>
+            <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
+        </div>
+
+        <!-- Standard Only -->
+        <div class="control-group" id="grp-pal">
+            <label>Color Palette</label>
+            <select id="sel-pal" onchange="app.updParams()">
+                <option value="0">Magma</option>
+                <option value="1">Viridis</option>
+                <option value="2">Ice</option>
+                <option value="3">Electric</option>
+            </select>
+        </div>
+
+        <!-- Atlas Only -->
+        <div class="control-group hidden" id="grp-grid">
+            <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
+            <input type="range" id="sl-grid" min="2" max="100" value="10">
+        </div>
+
+        <div class="control-group">
+            <label>&nbsp;</label>
+            <button class="action-btn" style="width:100%" onclick="app.resetPos()">RESET POSITION</button>
         </div>
     </div>
 </div>
@@ -166,82 +159,82 @@
 <!-- SAVE MODAL -->
 <div id="save-modal">
     <div class="modal-box">
-        <h3 style="margin-top:0; color:white;">Save High-Res Image</h3>
+        <h3 style="margin-top:0; color:white;">Save High-Res Render</h3>
         <div class="modal-row">
-            <label>Select View</label>
+            <label style="display:block; margin-bottom:5px;">Select Target Window</label>
             <select id="save-view">
-                <option value="left">Left Window</option>
-                <option value="right" selected>Right Window</option>
+                <option value="left">Left Window (Mandelbrot / Atlas)</option>
+                <option value="right" selected>Right Window (Julia / Atlas)</option>
             </select>
         </div>
         <div class="modal-row">
-            <label>Resolution</label>
+            <label style="display:block; margin-bottom:5px;">Resolution</label>
             <select id="save-res">
-                <option value="1">Screen (Preview)</option>
+                <option value="1">Screen Size (Fast)</option>
                 <option value="2">HD (1920x1080)</option>
                 <option value="4">4K (3840x2160)</option>
                 <option value="8">8K (7680x4320)</option>
             </select>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
             <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
-            <button class="action-btn" style="background:var(--accent); color:black;" onclick="app.save()">Render</button>
+            <button class="action-btn" style="background:var(--accent); color:black;" onclick="app.save()">Render Image</button>
         </div>
     </div>
 </div>
 
 <script>
-// --- GLSL MATH LIBRARY (Inserted before main) ---
-const MATH_LIB = `
+// --- EQUATION TRANSLATOR ---
+// Turns "z^2 + c" into "cadd(csqr(z), c)" for GLSL
+function parseEquation(eq) {
+    let s = eq.toLowerCase().replace(/\s+/g, ''); // remove spaces
+    
+    // Shortcuts for popular sets
+    if(s === 'burningship') return 'vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y),2.0*abs(z.x)*abs(z.y))+c';
+    if(s === 'tricorn') return 'vec2(z.x*z.x-z.y*z.y,-2.0*z.x*z.y)+c';
+    
+    // Powers
+    s = s.replace(/z\^2(?!\.)/g, 'csqr(z)'); // exact z^2
+    s = s.replace(/z\^([0-9.]+)/g, 'cpow(z,$1)'); // z^3.5 etc
+    
+    // Trig
+    s = s.replace(/sin\(z\)/g, 'csin(z)');
+    s = s.replace(/cos\(z\)/g, 'ccos(z)');
+    
+    // Basic formatting fallback
+    return s;
+}
+
+// --- GLSL MATH LIBRARY ---
+const SHADER_HEAD = `
     precision highp float;
-    // Standard Math Helpers
-    #define PI 3.14159265
     
-    vec2 cadd(vec2 a, vec2 b) { return a + b; }
-    vec2 csub(vec2 a, vec2 b) { return a - b; }
-    vec2 cmul(vec2 a, vec2 b) { return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x); }
+    // Complex Math Functions
     vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
-    
     vec2 cpow(vec2 z, float n) {
         float r = length(z);
-        if(r < 0.0001) return vec2(0.0);
+        if(r < 0.00001) return vec2(0.0);
         float a = atan(z.y, z.x);
         return pow(r, n) * vec2(cos(a*n), sin(a*n));
     }
+    vec2 csin(vec2 z) { return vec2(sin(z.x)*cosh(z.y), cos(z.x)*sinh(z.y)); }
+    vec2 ccos(vec2 z) { return vec2(cos(z.x)*cosh(z.y), -sin(z.x)*sinh(z.y)); }
     
-    vec2 csin(vec2 z) {
-        return vec2(sin(z.x) * cosh(z.y), cos(z.x) * sinh(z.y));
-    }
-    
-    // Palette
+    // Palettes
     vec3 palette(float t, int id) {
-        vec3 a,b,c,d;
-        if(id==0) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.3,0.2,0.2); }
-        else if(id==1) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.0,0.33,0.67); }
-        else if(id==2) { a=vec3(0.5); b=vec3(0.5); c=vec3(0.8); d=vec3(0.15,0.2,0.3); }
-        else { a=vec3(0.5); b=vec3(0.5); c=vec3(2.0); d=vec3(0.5,0.2,0.25); }
+        vec3 a=vec3(0.5), b=vec3(0.5), c=vec3(1.0), d;
+        if(id==0) d=vec3(0.3,0.2,0.2);
+        else if(id==1) d=vec3(0.0,0.33,0.67);
+        else if(id==2) { c=vec3(0.8); d=vec3(0.15,0.2,0.3); }
+        else { c=vec3(2.0); d=vec3(0.5,0.2,0.25); }
         return a + b * cos(6.28318 * (c * t + d));
     }
 `;
 
-const FRAG_SOURCE = `
-    uniform vec2 u_res;
-    uniform vec2 u_offset;
-    uniform float u_zoom;
-    uniform vec2 u_c;
-    
-    uniform int u_mode;     // 0=Frac, 1=Neb, 2=Atlas
-    uniform int u_view;     // 0=Left, 1=Right
-    
-    uniform float u_iter;
-    uniform float u_grid;
-    uniform int u_pal;
-    
-    // Nebula Params
-    uniform float u_den;
-    uniform float u_lr;
-    uniform float u_lg;
-    uniform float u_lb;
+const SHADER_BODY = `
+    uniform vec2 u_res; uniform vec2 u_offset; uniform float u_zoom; uniform vec2 u_c;
+    uniform int u_mode; uniform int u_view; uniform float u_iter; uniform float u_grid;
+    uniform int u_pal; uniform float u_den; uniform float u_lr; uniform float u_lg; uniform float u_lb;
 
     void main() {
         vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
@@ -249,83 +242,73 @@ const FRAG_SOURCE = `
         
         bool isAtlas = (u_mode == 2);
         
+        // --- SPACE SETUP ---
         if(isAtlas) {
-            // Atlas Grid Logic
             vec2 guv = uv * u_grid;
             vec2 cell = floor(guv);
             vec2 tile = fract(guv) - 0.5;
             float rng = 4.0 / u_zoom;
             vec2 cmap = u_offset + (cell / u_grid) * rng;
-            z = tile * 3.0; 
+            z = tile * 3.0; // Zoom out slightly in tile
             c = cmap;
         } else {
-            // Standard Logic
             vec2 p = uv / u_zoom + u_offset;
-            // Left is Map, Right is Julia
-            if(u_view == 1) { z = p; c = u_c; }
-            else { z = vec2(0.0); c = p; }
+            if(u_view == 1) { z = p; c = u_c; } // Right screen (Julia)
+            else { z = vec2(0.0); c = p; }      // Left screen (Mandelbrot)
         }
 
-        // --- LOOP ---
+        // --- MATH ENGINE ---
         float iter = 0.0;
-        float d = 100.0; // Min Dist
-        float m = 0.0;   // Magnitude
+        float m = 0.0;
+        float acc_dens = 0.0;
         
-        // Accumulators for Nebula
-        float acc_r = 0.0;
-        float acc_g = 0.0;
-        float acc_b = 0.0;
+        const int MAX_LOOP = 10000;
         
-        // NOTE: We use a fixed loop size for shader compatibility. 
-        // Logic breaks early based on u_iter
-        for(int i=0; i<10000; i++) {
+        for(int i=0; i<MAX_LOOP; i++) {
             if(float(i) > u_iter) break;
             
-            // --- INJECTED EQ ---
+            // INJECTED EQUATION
             z = {{EQ}};
-            // ------------------
             
             m = dot(z,z);
             if(m > 100.0) break;
             
-            d = min(d, length(z)); // Trap
+            // Accumulate density for the "Glowing Gas" Nebula effect
+            acc_dens += exp(-length(z) * 1.5);
             
-            // Nebula Stacking
-            // We add light to channels if iteration count passes threshold
-            // This creates the "layered" Buddhabrot look
-            float glow = exp(-length(z) * 1.5); 
-            if(float(i) > u_lr) acc_r += glow;
-            if(float(i) > u_lg) acc_g += glow;
-            if(float(i) > u_lb) acc_b += glow;
-
             iter += 1.0;
         }
 
+        // --- RENDER ENGINE ---
         vec3 col = vec3(0.0);
-        bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1);
+        bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1); // Nebula or Nebula Atlas
 
         if(isNeb) {
-            // Nebula Coloring
-            // Normalize accumulators
-            col = vec3(acc_r, acc_g, acc_b) * 0.01 * u_den;
-            col = pow(col, vec3(0.8)); // Gamma correction
+            // Buddhabrot / Nebula Logic
+            // If the point survives past the threshold, it adds its density to the channel
+            if(iter > u_lr && iter < u_iter) col.r = acc_dens;
+            if(iter > u_lg && iter < u_iter) col.g = acc_dens;
+            if(iter > u_lb && iter < u_iter) col.b = acc_dens;
+            
+            // Apply Master Brightness & Gamma Correct
+            col *= (u_den * 0.015);
+            col = pow(col, vec3(0.8));
         } else {
-            // Standard Coloring
+            // Standard Fractal Logic
             if(m < 100.0) col = vec3(0.0);
             else {
                 float sn = iter - log2(log2(m)) + 4.0;
-                col = palette(sn * 0.02, u_pal);
+                col = palette(sn * 0.03, u_pal);
             }
         }
 
-        // Grid Overlay
+        // --- UI OVERLAYS ---
         if(isAtlas) {
+            // Atlas Grid Lines
             vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
             if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
-        }
-        
-        // Dot Overlay (Left Screen Only, Not Atlas)
-        if(u_view == 0 && u_mode != 2) {
+        } else if(u_view == 0) {
+            // Mandelbrot Seed Dot
              float dist = distance(c, u_c);
              float sz = 0.015 / u_zoom;
              if(dist < sz) col = vec3(1.0);
@@ -343,7 +326,7 @@ const app = {
         left: {x: -0.5, y: 0.0, z: 1.0},
         right: {x: 0.0, y: 0.0, z: 1.0},
         p: { iter: 300, grid: 10, pal: 0, den: 1.5, r: 200, g: 100, b: 50 },
-        drag: false, active: null, last: {x:0, y:0}
+        drag: false, active: null, last: {x:0, y:0}, saving: false
     },
     ctx: [],
 
@@ -367,20 +350,22 @@ const app = {
     },
 
     compile: function() {
-        const eq = document.getElementById('inp-eq').value;
-        const fs = MATH_LIB + FRAG_SOURCE.replace('{{EQ}}', eq);
+        const rawEq = document.getElementById('inp-eq').value;
+        const glslEq = parseEquation(rawEq);
+        
+        const fs = SHADER_HEAD + SHADER_BODY.replace('{{EQ}}', glslEq);
         const vs = "attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}";
         
-        let err = null;
+        let success = true;
         this.ctx.forEach(c => {
             const p = this.mkProg(c.gl, vs, fs);
-            if(p) { c.prog = p; } else { err = "Shader Error"; }
+            if(p) c.prog = p; else success = false;
         });
 
         const log = document.getElementById('error-log');
-        if(err) {
+        if(!success) {
             log.style.display = 'block';
-            log.innerText = "Error parsing equation. Check syntax (e.g. use 2.0 instead of 2).";
+            log.innerText = `MATH ERROR:\nCannot parse: "${rawEq}"\nEnsure math is valid (e.g. z^2 + c)`;
         } else {
             log.style.display = 'none';
         }
@@ -389,12 +374,11 @@ const app = {
     mkProg: function(gl, vsS, fsS) {
         const s = (t, src) => {
             const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o);
-            if(!gl.getShaderParameter(o, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(o)); return null; }
+            if(!gl.getShaderParameter(o, gl.COMPILE_STATUS)) return null;
             return o;
         };
         const p = gl.createProgram();
-        const v = s(gl.VERTEX_SHADER, vsS);
-        const f = s(gl.FRAGMENT_SHADER, fsS);
+        const v = s(gl.VERTEX_SHADER, vsS), f = s(gl.FRAGMENT_SHADER, fsS);
         if(!v || !f) return null;
         
         gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
@@ -413,7 +397,7 @@ const app = {
         if(!ctx.prog) return;
         const {gl, cvs, prog} = ctx;
         
-        if(!app.saving) {
+        if(!app.state.saving) {
             const dpr = window.devicePixelRatio||1;
             const w=Math.floor(cvs.clientWidth*dpr), h=Math.floor(cvs.clientHeight*dpr);
             if(cvs.width!==w || cvs.height!==h) { cvs.width=w; cvs.height=h; gl.viewport(0,0,w,h); }
@@ -444,7 +428,7 @@ const app = {
     },
 
     loop: function() {
-        if(!app.saving) {
+        if(!app.state.saving) {
             this.render(this.ctx[0], 0);
             this.render(this.ctx[1], 1);
         }
@@ -457,7 +441,7 @@ const app = {
         
         let l="Mandelbrot", r="Julia Set";
         if(m===1) { l="Buddhabrot"; r="Nebula Julia"; }
-        if(m===2) { l="Julia Atlas"; r="Nebula Atlas"; }
+        if(m===2) { l="Standard Atlas"; r="Nebula Atlas"; }
         document.getElementById('lbl-left').innerText=l;
         document.getElementById('lbl-right').innerText=r;
         ui.updControls();
@@ -469,7 +453,7 @@ const app = {
     },
 
     save: function() {
-        app.saving = true;
+        app.state.saving = true;
         const view = document.getElementById('save-view').value;
         const res = parseInt(document.getElementById('save-res').value);
         const ctx = view==='left' ? this.ctx[0] : this.ctx[1];
@@ -485,40 +469,37 @@ const app = {
         
         const a = document.createElement('a');
         a.download = `fractal_${view}_${Date.now()}.png`;
-        a.href = ctx.cvs.toDataURL();
+        a.href = ctx.cvs.toDataURL('image/png');
         a.click();
         
         ctx.cvs.width = ow; ctx.cvs.height = oh; ctx.gl.viewport(0,0,ow,oh);
-        app.saving = false;
+        app.state.saving = false;
         ui.toggleModal(false);
     }
 };
 
 const ui = {
     init: function() {
-        const ids = ['iter','grid','red','grn','blu','den'];
-        const upd = () => {
+        app.updParams = () => {
             const v = id => parseFloat(document.getElementById(id).value);
             const p = app.state.p;
             p.iter=v('sl-iter'); p.grid=v('sl-grid'); p.r=v('sl-red'); p.g=v('sl-grn'); p.b=v('sl-blu'); p.den=v('sl-den');
             p.pal = parseInt(document.getElementById('sel-pal').value);
             
-            ids.forEach(k => {
-                 const el = document.getElementById(`val-${k}`);
-                 if(el) el.innerText = v(`sl-${k}`);
-            });
+            ['iter','grid','red','grn','blu'].forEach(k => document.getElementById(`val-${k}`).innerText = v(`sl-${k}`));
         };
-        document.querySelectorAll('input, select').forEach(e => e.oninput = upd);
         
-        // Mouse / Lock Logic
+        document.querySelectorAll('input[type=range], select').forEach(e => e.addEventListener('input', app.updParams));
+        
+        // Setup Mouse / Lock
         app.ctx.forEach((c, idx) => {
             const isR = idx===1;
             const cv = c.cvs;
             
+            // Double click to Lock Seed
             cv.addEventListener('dblclick', () => {
                app.state.locked = !app.state.locked;
-               const ind = document.getElementById('lock-indicator');
-               ind.style.display = app.state.locked ? 'block' : 'none';
+               document.getElementById('lock-indicator').style.display = app.state.locked ? 'block' : 'none';
             });
 
             cv.addEventListener('mousedown', e => {
@@ -526,23 +507,17 @@ const ui = {
                 app.state.active = isR ? 'r' : 'l';
                 app.state.last = {x:e.clientX, y:e.clientY};
                 
+                // Set Seed (Left Screen, Not Atlas, Not Locked)
                 if(!isR && app.state.mode!==2 && !app.state.locked) {
                     const r = cv.getBoundingClientRect();
                     const cam = app.state.left;
-                    const asp = cv.width/cv.height;
-                    const nx = ((e.clientX-r.left)/r.width - 0.5) * aspect;
-                    const ny = -((e.clientY-r.top)/r.height - 0.5); // DOM Y inverted
                     
-                    // Correct aspect ratio math for selection
-                    // Shader does: (xy - 0.5*res)/res.y -> x is scaled by aspect
-                    // Shader does: uv/zoom + offset
-                    // So we must match that exactly.
-                    const aspectShader = cv.width/cv.height;
-                    const uvX = ((e.clientX - r.left) / r.height) - (aspectShader*0.5);
-                    const uvY = -(((e.clientY - r.top) / r.height) - 0.5);
+                    const aspect = cv.width/cv.height;
+                    const nx = ((e.clientX - r.left) / r.width - 0.5) * aspect;
+                    const ny = -((e.clientY - r.top) / r.height - 0.5); 
                     
-                    app.state.c.x = uvX / cam.z + cam.x;
-                    app.state.c.y = uvY / cam.z + cam.y;
+                    app.state.c.x = nx / cam.z + cam.x;
+                    app.state.c.y = ny / cam.z + cam.y;
                     
                     document.getElementById('c-coords').innerText = `C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
                 }
@@ -554,8 +529,10 @@ const ui = {
                     const dx = e.clientX - app.state.last.x;
                     const dy = e.clientY - app.state.last.y;
                     app.state.last = {x:e.clientX, y:e.clientY};
+                    
                     const fac = 1.0 / (cv.clientHeight * cam.z);
-                    cam.x -= dx * fac; cam.y += dy * fac;
+                    cam.x -= dx * fac * 2.0; 
+                    cam.y += dy * fac * 2.0;
                 }
             });
 
@@ -582,6 +559,8 @@ const ui = {
         s('grp-grid', isAtl);
     }
 };
+
+window.onload = () => app.init();
 </script>
 </body>
 </html>
