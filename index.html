@@ -22,10 +22,9 @@
         .canvas-container { flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden; background: #000; }
         
         canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
-        .cvs-2d { z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.2s;}
         
-        /* Activate Progressive CPU Renderer when needed */
-        .mode-nebula #2d-left, .mode-nebula #2d-right, .mode-atlas #2d-right { opacity: 1; pointer-events: auto; }
+        /* The CPU renderer overlays the GPU renderer */
+        .cvs-cpu { z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.2s;} 
         
         .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 10;}
 
@@ -73,12 +72,12 @@
         <div class="view-label" id="lbl-left">Mandelbrot</div>
         <!-- Dual Canvas Architecture -->
         <canvas id="gl-left"></canvas>
-        <canvas id="2d-left" class="cvs-2d"></canvas>
+        <canvas id="cpu-left" class="cvs-cpu"></canvas>
     </div>
     <div class="canvas-container">
-        <div class="view-label" id="lbl-right">Julia</div>
+        <div class="view-label" id="lbl-right">Julia Set</div>
         <canvas id="gl-right"></canvas>
-        <canvas id="2d-right" class="cvs-2d"></canvas>
+        <canvas id="cpu-right" class="cvs-cpu"></canvas>
     </div>
 </div>
 
@@ -179,7 +178,7 @@
                 <input type="number" id="save-h" value="1080" style="width:80px;" placeholder="Height">
             </div>
             
-            <div style="font-size: 10px; color: var(--accent); margin-top: 10px;">Note: Nebulae are saved natively from the progressive canvas to preserve true trajectory detail.</div>
+            <div style="font-size: 10px; color: var(--accent); margin-top: 10px;">Note: Nebulae are saved natively from the progressive engine to preserve trajectory detail.</div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
             <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
@@ -260,7 +259,7 @@ const GL_CORE = {
                     col = palette(sn * 0.03, u_pal);
                 }
 
-                // Grid & Dot Overlays
+                // Grid & Dot Overlays (SCREEN SPACE)
                 if(isAtlas) {
                     vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
                     if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
@@ -313,7 +312,7 @@ const GL_CORE = {
 };
 
 // =======================================================
-// MODULE 2: CPU PROGRESSIVE ENGINE (For True Nebulae & Nebula Atlas)
+// MODULE 2: CPU PROGRESSIVE ENGINE (For True Nebulae)
 // =======================================================
 class NebulaRenderer {
     constructor(canvasId) {
@@ -345,11 +344,10 @@ class NebulaRenderer {
         const vw = (w/h) * (1.0 / cam.z); const vh = 1.0 / cam.z;
         const minX = cam.x - vw/2; const minY = cam.y - vh/2;
         
-        const batch = 30000; // Fast Trajectory Engine
+        const batch = 30000; 
         const p = state.p; const max_i = p.iter;
         const trX = new Float32Array(max_i); const trY = new Float32Array(max_i);
 
-        // Logic check: Is this rendering the Nebula Atlas?
         const isNebulaAtlas = (state.mode === 2 && isRight);
         const grid = p.grid;
 
@@ -359,7 +357,7 @@ class NebulaRenderer {
             let cr, ci, zx, zy, cellX, cellY;
             
             if (isNebulaAtlas) {
-                // TRUE NEBULA ATLAS LOGIC (Draws Julia sets in a grid)
+                // TRUE NEBULA ATLAS LOGIC
                 let asp = w/h;
                 let uvX = (Math.random() - 0.5) * asp;
                 let uvY = (Math.random() - 0.5); 
@@ -370,12 +368,11 @@ class NebulaRenderer {
                 cr = cam.x + (cellX / grid) * (4.0 / cam.z);
                 ci = cam.y + (cellY / grid) * (4.0 / cam.z);
                 
-                // Random point inside the Julia tile bounds (-1.5 to 1.5)
                 zx = (Math.random() - 0.5) * 3.0;
                 zy = (Math.random() - 0.5) * 3.0;
                 
             } else {
-                // STANDARD NEBULA LOGIC (Buddhabrot or Nebula Julia)
+                // STANDARD NEBULA LOGIC
                 let sr = cam.x + (Math.random()-0.5) * vw * 1.5;
                 let si = cam.y + (Math.random()-0.5) * vh * 1.5;
                 
@@ -387,7 +384,6 @@ class NebulaRenderer {
             
             let step = 0; let esc = false;
             
-            // Loop Math
             while(step < max_i) {
                 trX[step] = zx; trY[step] = zy;
                 let nx, ny;
@@ -405,16 +401,14 @@ class NebulaRenderer {
                 step++;
             }
             
-            // Draw Trajectory
             if(esc && step > 0) {
                 for(let s=0; s<step; s++) {
                     let px, py;
                     
                     if (isNebulaAtlas) {
-                        // Map the trajectory back to its tiny cell on the screen
                         let tzX = trX[s] / 3.0; 
                         let tzY = trY[s] / 3.0;
-                        if (tzX < -0.5 || tzX > 0.5 || tzY < -0.5 || tzY > 0.5) continue; // Out of tile bounds
+                        if (tzX < -0.5 || tzX > 0.5 || tzY < -0.5 || tzY > 0.5) continue;
                         
                         let guvX = cellX + tzX + 0.5;
                         let guvY = cellY + tzY + 0.5;
@@ -423,7 +417,6 @@ class NebulaRenderer {
                         py = Math.floor((guvY / grid) * h + h/2);
                         
                     } else {
-                        // Standard Screen Mapping
                         px = Math.floor((trX[s] - minX) / vw * w);
                         py = Math.floor((trY[s] - minY) / vh * h);
                     }
@@ -442,7 +435,6 @@ class NebulaRenderer {
         const data = this.imgData.data;
         const len = w * h * 3;
         
-        // Adjust exposure bases
         const baseGain = isRight ? 20.0 : 800.0; 
         const scale = (p.den * baseGain) / this.frames;
         const norm = 1.0 / Math.log1p(baseGain); 
@@ -499,7 +491,7 @@ const app = {
 
     init: function() {
         this.glCtx = [GL_CORE.setup('gl-left'), GL_CORE.setup('gl-right')];
-        this.nebCtx = [new NebulaRenderer('2d-left'), new NebulaRenderer('2d-right')];
+        this.nebCtx = [new NebulaRenderer('cpu-left'), new NebulaRenderer('cpu-right')];
         ui.init();
         this.triggerReset();
         this.loop();
@@ -520,9 +512,8 @@ const app = {
                 this.nebCtx[0].renderBatch(this.state, false);
                 this.nebCtx[1].renderBatch(this.state, true);
             } else if (this.state.mode === 2) {
-                // Atlas: Left is GPU, Right is CPU True Nebula Atlas
-                GL_CORE.render(this.glCtx[0], this.state, false);
-                this.nebCtx[1].renderBatch(this.state, true);
+                GL_CORE.render(this.glCtx[0], this.state, false); // Standard Julia Atlas
+                this.nebCtx[1].renderBatch(this.state, true);     // True Nebula Atlas
             }
         }
         
@@ -544,6 +535,13 @@ const app = {
         document.getElementById('lbl-left').innerText=l;
         document.getElementById('lbl-right').innerText=r;
         
+        // Control Visiblity via explicit JS to prevent CSS bugs
+        document.getElementById('cpu-left').style.opacity = (m === 1) ? '1' : '0';
+        document.getElementById('cpu-left').style.pointerEvents = (m === 1) ? 'auto' : 'none';
+        
+        document.getElementById('cpu-right').style.opacity = (m === 1 || m === 2) ? '1' : '0';
+        document.getElementById('cpu-right').style.pointerEvents = (m === 1 || m === 2) ? 'auto' : 'none';
+
         ui.updControls();
         this.triggerReset();
     },
@@ -559,7 +557,6 @@ const app = {
         const resChoice = document.getElementById('save-res').value;
         const isRight = (view === 'right');
         
-        // Determine which engine is running that screen
         const useCpuEngine = (this.state.mode === 1) || (this.state.mode === 2 && isRight);
         
         let targetCvs;
@@ -574,9 +571,10 @@ const app = {
             let w = ow, h = oh;
             if(resChoice === '2') { w=1920; h=1080; }
             else if(resChoice === '4') { w=3840; h=2160; }
+            else if(resChoice === '8') { w=7680; h=4320; }
             else if(resChoice === 'custom') { 
-                w = parseInt(document.getElementById('save-w').value);
-                h = parseInt(document.getElementById('save-h').value);
+                w = parseInt(document.getElementById('save-w').value) || 1920;
+                h = parseInt(document.getElementById('save-h').value) || 1080;
             }
             
             ctx.cvs.width = w; ctx.cvs.height = h; ctx.gl.viewport(0,0,w,h);
@@ -649,12 +647,14 @@ const ui = {
                     const dy = e.clientY - app.state.last.y;
                     app.state.last = {x:e.clientX, y:e.clientY};
                     
-                    // PERFECT 1:1 PANNING
-                    let factor = 1.0 / (cont.clientHeight * cam.z);
-                    if(app.state.mode === 2) factor *= 4.0; // Math multiplier specific to Atlas Range
-                    
-                    cam.x -= dx * factor; 
-                    cam.y += dy * factor;
+                    // FLAWLESS 1:1 PANNING MATH
+                    if(app.state.mode === 2) {
+                        cam.x -= (dx / cont.clientHeight) * (4.0 / cam.z);
+                        cam.y += (dy / cont.clientHeight) * (4.0 / cam.z);
+                    } else {
+                        cam.x -= (dx / cont.clientHeight) / cam.z;
+                        cam.y += (dy / cont.clientHeight) / cam.z;
+                    }
                     
                     if(app.state.mode === 1 || app.state.mode === 2) app.triggerReset();
                 }
