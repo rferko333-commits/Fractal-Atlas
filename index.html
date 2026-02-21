@@ -3,64 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fractal Atlas - Architect</title>
+    <title>Fractal Atlas - Master</title>
     <style>
-        :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
-        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
+        :root { --bg: #000; --accent: #00d2ff; --text: #eee; --glass: rgba(20, 20, 20, 0.85); --border: 1px solid #333; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
 
         /* HEADER */
-        header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: #080808; border-bottom: 1px solid #333; }
-        #back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding-right: 15px;}
-        .mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 8px 14px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; letter-spacing: 0.5px;}
+        header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #050505; border-bottom: var(--border); z-index: 100; position: relative; }
+        #back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0 10px;}
+        .mode-tabs { display: flex; gap: 5px; }
+        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; }
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-        .action-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .action-btn:hover { background: #555; }
+        .icon-btn { background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 10px; }
 
         /* VIEWPORT */
-        #viewport { display: flex; height: calc(100vh - 210px); width: 100%; position: relative; }
-        .canvas-container { flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden; background: #000; }
-        
-        canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+        #viewport { display: flex; height: calc(100vh - 50px); width: 100%; position: relative; }
+        .canvas-container { flex: 1; position: relative; border-right: var(--border); overflow: hidden; background: #000; }
+        canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .cvs-cpu { z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.2s;} 
-        
         .mode-nebula #cpu-left, .mode-nebula #cpu-right, .mode-atlas #cpu-right { opacity: 1; pointer-events: auto; }
         
-        .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 10;}
+        .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; z-index: 10;}
 
-        /* OVERLAYS */
-        #bottom-bar { position: absolute; bottom: 170px; left: 10px; pointer-events: none; display: flex; gap: 10px; z-index: 10; align-items: center;}
-        .info-tag { background: rgba(0,0,0,0.8); padding: 6px 12px; font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: auto; font-family: monospace;}
-        #lock-indicator { display: none; color: var(--success); border-color: var(--success); font-weight: bold; background: rgba(0,255,136,0.1);}
-        #zoom-warning { display: none; color: var(--danger); border-color: var(--danger); font-weight: bold; background: rgba(255,0,0,0.1);}
-        #error-log { display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: rgba(100,0,0,0.9); color: white; padding: 15px; border: 2px solid var(--danger); font-size: 12px; z-index: 999; border-radius: 4px; font-family: monospace; white-space: pre-wrap; width: 80%; max-width: 500px;}
+        /* INFO OVERLAY (Bottom Left) */
+        #info-overlay { position: absolute; bottom: 20px; left: 10px; display: flex; flex-direction: column; gap: 5px; pointer-events: none; z-index: 20; }
+        .tag { background: rgba(0,0,0,0.7); padding: 5px 8px; font-size: 11px; border: var(--border); border-radius: 4px; color: #aaa; font-family: monospace; width: fit-content; pointer-events: auto;}
+        .tag-warn { color: #ff4444; border-color: #ff4444; display: none; }
+        .tag-lock { color: #00ff88; border-color: #00ff88; display: none; }
 
-        /* CONTROLS */
-        #controls { height: 160px; background: #080808; border-top: 1px solid #333; padding: 10px 15px; overflow-y: auto; }
-        .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; align-items: start; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 10px; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        /* SETTINGS MENU (Glass Overlay) */
+        #settings-menu { 
+            position: absolute; top: 50px; right: 0; bottom: 0; width: 300px; 
+            background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border-left: var(--border); transform: translateX(100%); transition: transform 0.3s ease;
+            z-index: 50; display: flex; flex-direction: column;
+        }
+        #settings-menu.open { transform: translateX(0); }
         
-        input[type="range"] { width: 100%; height: 16px; background: #333; appearance: none; border-radius: 8px; cursor: pointer; }
-        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; }
-        select, input[type="text"], input[type="number"] { background: #222; color: #eee; border: 1px solid #444; padding: 8px; border-radius: 4px; font-size: 12px; width: 100%; box-sizing: border-box; font-family: monospace;}
+        .settings-content { flex: 1; overflow-y: auto; padding: 20px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-size: 10px; color: #aaa; text-transform: uppercase; margin-bottom: 5px; font-weight: bold; }
         
-        .val-disp { font-size: 10px; color: var(--accent); float: right; }
-        .lbl-r { color: #ff6b6b; } .lbl-g { color: #51cf66; } .lbl-b { color: #339af0; }
+        input[type="range"] { width: 100%; height: 4px; background: #444; appearance: none; border-radius: 2px; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: var(--accent); border-radius: 50%; border: 2px solid #fff; }
+        select, input[type="text"], input[type="number"] { width: 100%; background: #222; border: 1px solid #555; color: white; padding: 8px; border-radius: 4px; font-size: 12px; box-sizing: border-box; }
+        
+        .action-btn { width: 100%; background: #333; color: white; border: 1px solid #555; padding: 10px; border-radius: 4px; font-weight: bold; margin-top: 5px; cursor: pointer; }
+        .action-btn:active { background: #555; }
+
         .hidden { display: none !important; }
-
+        .val-disp { float: right; color: var(--accent); }
+        
         /* SAVE MODAL */
-        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; }
-        .modal-box { background: #151515; border: 1px solid #444; padding: 25px; width: 90%; max-width: 320px; border-radius: 8px; }
-        .modal-row { margin-bottom: 15px; }
+        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; }
+        .modal-box { background: #1a1a1a; border: 1px solid #444; padding: 20px; width: 90%; max-width: 350px; border-radius: 8px; }
 
-        /* MOBILE OPTIMIZATION */
-        @media (max-width: 768px) {
+        /* MOBILE TWEAKS */
+        @media (max-width: 700px) {
             #viewport { flex-direction: column; }
-            .canvas-container { border-right: none; border-bottom: 1px solid #333; }
-            #bottom-bar { bottom: auto; top: 60px; }
-            header { padding: 0 5px; }
-            .tab-btn { padding: 8px 8px; }
+            .canvas-container { border-right: none; border-bottom: var(--border); }
+            #settings-menu { width: 85%; }
         }
     </style>
 </head>
@@ -73,8 +75,7 @@
         <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
         <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
     </div>
-    <div style="flex:1"></div>
-    <button class="action-btn" onclick="ui.toggleModal(true)">SAVE VIEW</button>
+    <button class="icon-btn" onclick="ui.toggleSettings()">⚙️</button>
 </header>
 
 <div id="viewport">
@@ -88,32 +89,33 @@
         <canvas id="gl-right"></canvas>
         <canvas id="cpu-right" class="cvs-cpu"></canvas>
     </div>
+    
+    <!-- Floating Info -->
+    <div id="info-overlay">
+        <div class="tag" id="c-coords">C: -0.7600, 0.1200</div>
+        <div class="tag tag-lock" id="lock-indicator">🔒 SEED LOCKED</div>
+        <div class="tag tag-warn" id="zoom-warning">⚠️ MAX GPU PRECISION</div>
+    </div>
 </div>
 
-<div id="bottom-bar">
-    <div class="info-tag" id="c-coords">C: -0.7600, 0.1200</div>
-    <div class="info-tag" id="lock-indicator">🔒 SEED LOCKED</div>
-    <div class="info-tag" id="zoom-warning">⚠️ LIMIT: Float Pixelation</div>
-</div>
-<div id="error-log"></div>
-
-<div id="controls">
-    <div class="ctrl-grid">
-        <div class="control-group" style="grid-column: span 2; max-width: 400px;">
-            <label>Fractal Equation Library</label>
-            <div style="display:flex; gap: 5px;">
-                <select id="sel-preset" style="flex:1;" onchange="app.loadPreset()">
-                    <option value="z^2 + c">Mandelbrot (z²)</option>
-                    <option value="z^3 + c">Cubic (z³)</option>
-                    <option value="z^4 + c">Quartic (z⁴)</option>
-                    <option value="z^5 + c">Quintic (z⁵)</option>
-                    <option value="burningship">Burning Ship</option>
-                    <option value="tricorn">Tricorn</option>
-                    <option value="sin(z) + c">Sine Fractal</option>
-                </select>
-                <input type="text" id="inp-eq" value="z^2 + c" style="flex:1;">
-                <button class="action-btn" style="background:var(--accent); color:#000;" onclick="app.compile()">APPLY</button>
-            </div>
+<!-- SLIDE-OUT SETTINGS -->
+<div id="settings-menu">
+    <div class="settings-content">
+        
+        <div class="control-group">
+            <label>Fractal Equation</label>
+            <select id="sel-preset" onchange="app.loadPreset()">
+                <option value="z^2 + c">Mandelbrot (z²)</option>
+                <option value="z^3 + c">Cubic (z³)</option>
+                <option value="z^4 + c">Quartic (z⁴)</option>
+                <option value="z^5 + c">Quintic (z⁵)</option>
+                <option value="burningship">Burning Ship</option>
+                <option value="tricorn">Tricorn</option>
+                <option value="sin(z) + c">Sine Fractal</option>
+            </select>
+            <input type="text" id="inp-eq" value="z^2 + c" style="margin-top:5px;">
+            <button class="action-btn" style="background:var(--accent); color:black; margin-top:5px;" onclick="app.compile()">Apply Equation</button>
+            <div id="error-log" style="color:#ff4444; font-size:10px; margin-top:5px; display:none;"></div>
         </div>
 
         <div class="control-group">
@@ -121,24 +123,33 @@
             <input type="range" id="sl-iter" min="50" max="10000" value="300">
         </div>
 
-        <div class="control-group hidden" id="grp-neb-r">
-            <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
-            <input type="range" id="sl-red" min="0" max="1000" value="200">
-        </div>
-        <div class="control-group hidden" id="grp-neb-g">
-            <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
-            <input type="range" id="sl-grn" min="0" max="1000" value="100">
-        </div>
-        <div class="control-group hidden" id="grp-neb-b">
-            <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
-            <input type="range" id="sl-blu" min="0" max="1000" value="50">
-        </div>
-        <div class="control-group hidden" id="grp-neb-den">
-            <label>Nebula Brightness</label>
-            <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
+        <div class="control-group">
+            <label>Zoom Speed</label>
+            <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
         </div>
 
-        <div class="control-group" id="grp-pal">
+        <!-- NEBULA CONTROLS -->
+        <div id="grp-nebula" class="hidden">
+            <div class="control-group">
+                <label style="color:#ff6b6b">Red Escape Threshold <span id="val-red" class="val-disp">200</span></label>
+                <input type="range" id="sl-red" min="0" max="2000" value="200">
+            </div>
+            <div class="control-group">
+                <label style="color:#51cf66">Green Escape Threshold <span id="val-grn" class="val-disp">100</span></label>
+                <input type="range" id="sl-grn" min="0" max="2000" value="100">
+            </div>
+            <div class="control-group">
+                <label style="color:#339af0">Blue Escape Threshold <span id="val-blu" class="val-disp">50</span></label>
+                <input type="range" id="sl-blu" min="0" max="2000" value="50">
+            </div>
+            <div class="control-group">
+                <label>Nebula Brightness</label>
+                <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
+            </div>
+        </div>
+
+        <!-- STANDARD CONTROLS -->
+        <div id="grp-std" class="control-group">
             <label>Color Palette</label>
             <select id="sel-pal" onchange="app.triggerReset()">
                 <option value="0">Magma</option>
@@ -148,44 +159,46 @@
             </select>
         </div>
 
-        <div class="control-group hidden" id="grp-grid">
+        <!-- ATLAS CONTROLS -->
+        <div id="grp-atlas" class="control-group hidden">
             <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
             <input type="range" id="sl-grid" min="2" max="100" value="10">
         </div>
 
-        <div class="control-group">
-            <label>&nbsp;</label>
-            <button class="action-btn" style="width:100%" onclick="app.resetPos()">RESET CAMERA</button>
-        </div>
+        <button class="action-btn" onclick="app.resetPos()">Reset Camera</button>
+        <button class="action-btn" style="margin-top:15px;" onclick="ui.toggleModal(true)">Save High-Res Image</button>
+        
+        <div style="height: 50px;"></div> <!-- Spacer -->
     </div>
 </div>
 
+<!-- SAVE MODAL -->
 <div id="save-modal">
     <div class="modal-box">
-        <h3 style="margin-top:0; color:white;">Save High-Res Render</h3>
-        <div class="modal-row">
-            <label style="display:block; margin-bottom:5px; color:#aaa; font-size:10px;">TARGET WINDOW</label>
+        <h3 style="margin-top:0; color:white;">Save Image</h3>
+        <div class="control-group">
+            <label>Target Window</label>
             <select id="save-view">
                 <option value="left">Left Window</option>
                 <option value="right" selected>Right Window</option>
             </select>
         </div>
-        <div class="modal-row" id="row-res">
-            <label style="display:block; margin-bottom:5px; color:#aaa; font-size:10px;">RESOLUTION</label>
+        <div class="control-group" id="row-res">
+            <label>Resolution</label>
             <select id="save-res" onchange="ui.checkCustomRes()">
-                <option value="1">Screen Size (Fast)</option>
+                <option value="1">Screen Size</option>
                 <option value="2">HD (1920x1080)</option>
                 <option value="4">4K (3840x2160)</option>
                 <option value="8">8K (7680x4320)</option>
                 <option value="custom">Custom Input...</option>
             </select>
-            <div id="custom-res-div" style="display:none; margin-top:10px; gap:10px; align-items:center;">
-                <input type="number" id="save-w" value="4000" placeholder="Width"> x 
-                <input type="number" id="save-h" value="4000" placeholder="Height">
+            <div id="custom-res-div" style="display:none; gap:5px; margin-top:5px;">
+                <input type="number" id="save-w" value="4000" placeholder="W">
+                <input type="number" id="save-h" value="4000" placeholder="H">
             </div>
-            <div style="font-size: 10px; color: var(--accent); margin-top: 10px;">Note: Nebulae save exactly what is visible to preserve trajectory data. Let it expose first.</div>
+            <div style="font-size:10px; color:#888; margin-top:5px;">Nebulae save exactly what is visible to preserve trajectory data.</div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <div style="display:flex; gap:10px;">
             <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
             <button class="action-btn" style="background:var(--accent); color:black;" onclick="app.save()">Download</button>
         </div>
@@ -193,37 +206,30 @@
 </div>
 
 <script>
-// =======================================================
-// PARSER & MATH
-// =======================================================
+// --- MATH PARSER ---
 function parseEquation(eq) {
     let s = eq.toLowerCase().replace(/\s+/g, '');
-    app.state.p.eqMode = 0;
-    if (s === 'z^3+c') app.state.p.eqMode = 1;
-    else if (s === 'z^4+c') app.state.p.eqMode = 2;
-    else if (s === 'z^5+c') app.state.p.eqMode = 3;
-    else if (s === 'burningship') app.state.p.eqMode = 4;
-    else if (s === 'tricorn') app.state.p.eqMode = 5;
-    else if (s === 'sin(z)+c') app.state.p.eqMode = 6;
-    else if (s === 'cos(z)+c') app.state.p.eqMode = 7;
-    else {
-        let m = s.match(/z\^([0-9.]+)\+c/);
-        if(m) { app.state.p.eqMode = 8; app.state.p.customPow = parseFloat(m[1]); }
+    // CPU Mode Routing
+    app.state.p.eqMode = 0; 
+    if (s==='z^3+c') app.state.p.eqMode=1; else if (s==='z^4+c') app.state.p.eqMode=2;
+    else if (s==='z^5+c') app.state.p.eqMode=3; else if (s==='burningship') app.state.p.eqMode=4;
+    else if (s==='tricorn') app.state.p.eqMode=5; else if (s==='sin(z)+c') app.state.p.eqMode=6;
+    else if (s==='cos(z)+c') app.state.p.eqMode=7; else {
+        let m = s.match(/z\^([0-9.]+)\+c/); if(m){app.state.p.eqMode=8; app.state.p.customPow=parseFloat(m[1]);}
     }
-
-    if(s === 'burningship') return 'vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y), 2.0*abs(z.x*z.y))+c';
-    if(s === 'tricorn') return 'vec2(z.x*z.x-z.y*z.y, -2.0*z.x*z.y)+c';
-    s = s.replace(/z\^2(?!\.)/g, 'csqr(z)'); 
-    s = s.replace(/z\^([0-9.]+)/g, (m, p1) => p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`);
-    s = s.replace(/sin\(z\)/g, 'csin(z)');
-    s = s.replace(/cos\(z\)/g, 'ccos(z)');
+    // GLSL Translation
+    if(s==='burningship') return 'vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y), 2.0*abs(z.x*z.y))+c';
+    if(s==='tricorn') return 'vec2(z.x*z.x-z.y*z.y, -2.0*z.x*z.y)+c';
+    s = s.replace(/z\^2(?!\.)/g, 'csqr(z)');
+    s = s.replace(/z\^([0-9.]+)/g, (m,p1)=>p1.includes('.')?`cpow(z,${p1})`:`cpow(z,${p1}.0)`);
+    s = s.replace(/sin\(z\)/g, 'csin(z)'); s = s.replace(/cos\(z\)/g, 'ccos(z)');
     return s;
 }
 
-const GL_CORE = {
-    setup: function(id) {
-        const cvs = document.getElementById(id);
-        const gl = cvs.getContext('webgl', {preserveDrawingBuffer:true});
+// --- WEBGL RENDERER (GPU) ---
+const GL = {
+    setup: (id) => {
+        const cvs = document.getElementById(id), gl = cvs.getContext('webgl', {preserveDrawingBuffer:true});
         const vs = `attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}`;
         const fsHead = `
             #ifdef GL_FRAGMENT_PRECISION_HIGH
@@ -231,183 +237,215 @@ const GL_CORE = {
             #else
             precision mediump float;
             #endif
-            vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
-            vec2 cpow(vec2 z, float n) { float r = length(z); if(r<0.00001) return vec2(0.0); float a=atan(z.y, z.x); return pow(r, n)*vec2(cos(a*n),sin(a*n)); }
-            vec2 csin(vec2 z) { float ey=exp(z.y); float e_y=exp(-z.y); return vec2(sin(z.x)*(ey+e_y)/2.0, cos(z.x)*(ey-e_y)/2.0); }
-            vec2 ccos(vec2 z) { float ey=exp(z.y); float e_y=exp(-z.y); return vec2(cos(z.x)*(ey+e_y)/2.0, -sin(z.x)*(ey-e_y)/2.0); }
-            vec3 palette(float t, int id) { vec3 a=vec3(0.5), b=vec3(0.5), c=vec3(1.0), d; if(id==0) d=vec3(0.3,0.2,0.2); else if(id==1) d=vec3(0.0,0.33,0.67); else if(id==2) { c=vec3(0.8); d=vec3(0.15,0.2,0.3); } else { c=vec3(2.0); d=vec3(0.5,0.2,0.25); } return a + b * cos(6.28318 * (c * t + d)); }
+            vec2 csqr(vec2 z) { return vec2(z.x*z.x-z.y*z.y, 2.0*z.x*z.y); }
+            vec2 cpow(vec2 z, float n) { float r=length(z); if(r<1e-5)return vec2(0); float a=atan(z.y,z.x); return pow(r,n)*vec2(cos(a*n),sin(a*n)); }
+            vec2 csin(vec2 z) { float ey=exp(z.y),e_y=exp(-z.y); return vec2(sin(z.x)*(ey+e_y)/2., cos(z.x)*(ey-e_y)/2.); }
+            vec2 ccos(vec2 z) { float ey=exp(z.y),e_y=exp(-z.y); return vec2(cos(z.x)*(ey+e_y)/2., -sin(z.x)*(ey-e_y)/2.); }
+            vec3 pal(float t, int id) { vec3 c=vec3(1),d; if(id==0)d=vec3(0.3,0.2,0.2); else if(id==1)d=vec3(0.0,0.33,0.67); else if(id==2){c=vec3(0.8);d=vec3(0.15,0.2,0.3);} else{c=vec3(2.);d=vec3(0.5,0.2,0.25);} return vec3(0.5)+vec3(0.5)*cos(6.283*(c*t+d)); }
         `;
         const fsBody = `
-            uniform vec2 u_res; uniform vec2 u_offset; uniform float u_zoom; uniform vec2 u_c;
-            uniform int u_mode; uniform int u_view; uniform float u_iter; uniform float u_grid;
-            uniform int u_pal;
+            uniform vec2 u_res, u_off, u_c; uniform float u_zoom, u_grid, u_iter; uniform int u_mode, u_view, u_pal;
             void main() {
-                vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
-                vec2 z, c; vec2 p = uv / u_zoom + u_offset;
-                bool isAtlas = (u_mode == 2);
-                if(isAtlas) {
-                    float wts = 1.0 / (u_zoom * u_grid);
-                    vec2 center = (floor(p / wts) + 0.5) * wts;
-                    c = center * 4.0;
-                    z = ((p - center) / wts) * 3.0;
+                vec2 uv = (gl_FragCoord.xy - 0.5*u_res)/u_res.y;
+                vec2 z, c;
+                // ATLAS MATH: LOCKED TO WORLD GRID
+                if(u_mode==2) {
+                    vec2 wPos = uv/u_zoom + u_off;
+                    float tileSize = 1.0/(u_grid*0.25); // Scaling factor to match CPU
+                    vec2 cell = floor(wPos / tileSize);
+                    c = (cell + 0.5) * tileSize * 4.0; // Center C for this tile
+                    vec2 local = (wPos - (cell+0.5)*tileSize) / tileSize;
+                    z = local * 3.0; // Fit Julia into tile
                 } else {
-                    if(u_view == 1) { z = p * 3.0; c = u_c; } else { z = vec2(0.0); c = p * 4.0; }
+                    vec2 p = uv/u_zoom + u_off;
+                    if(u_view==1) { z=p; c=u_c; } else { z=vec2(0); c=p; }
                 }
-                float iter = 0.0; float m = 0.0;
-                for(int i=0; i<10000; i++) {
-                    if(float(i) > u_iter) break;
-                    z = {{EQ}}; 
-                    m = dot(z,z); if(m > 100.0) break; iter += 1.0;
+                float i=0., m=0.;
+                for(int k=0; k<10000; k++) {
+                    if(float(k)>u_iter) break;
+                    z = {{EQ}}; m=dot(z,z); if(m>100.) break; i+=1.;
                 }
-                vec3 col = vec3(0.0);
-                if(m >= 100.0) col = palette((iter - log2(log2(m)) + 4.0) * 0.03, u_pal);
-
-                // Pixel-perfect grid
-                if(isAtlas) {
-                    vec2 wtsPx = u_res.y / u_zoom / u_grid * vec2(1.0);
-                    vec2 gPx = abs(fract(p / (1.0/(u_zoom*u_grid))) - 0.5) * wtsPx;
-                    if(gPx.x < 1.0 || gPx.y < 1.0) col *= 0.5;
-                } else if(u_view == 0) {
-                    float dist = distance(p, u_c / 4.0) * u_zoom * u_res.y;
-                    if(dist < 5.0) col = vec3(1.0); else if(dist < 7.0) col = vec3(0.0);
+                vec3 col = vec3(0);
+                if(m>=100.) col = pal((i-log2(log2(m))+4.)*0.03, u_pal);
+                
+                // GRID OVERLAY (World Space -> Screen Space for alignment)
+                if(u_mode==2) {
+                    float ts = 1.0/(u_grid*0.25);
+                    vec2 gridUV = (uv/u_zoom + u_off) / ts;
+                    vec2 line = abs(fract(gridUV - 0.5) - 0.5) / fwidth(gridUV);
+                    if(min(line.x, line.y) < 1.0) col = vec3(0.1); // 1px Dark Line
                 }
-                gl_FragColor = vec4(col, 1.0);
+                // SEED DOT
+                else if(u_view==0) {
+                    if(length((u_c-u_off)*u_zoom - uv) < 0.015) col = vec3(1)-col;
+                }
+                gl_FragColor = vec4(col,1);
             }
         `;
-        return { gl, cvs, fsHead, fsBody, vs, prog: null };
+        return {gl, cvs, fsHead, fsBody, vs, prog:null};
     },
-    compile: function(ctx, eq) {
+    compile: (ctx, eq) => {
         const fs = ctx.fsHead + ctx.fsBody.replace('{{EQ}}', eq);
-        const s = (t, src) => { const o=ctx.gl.createShader(t); ctx.gl.shaderSource(o, src); ctx.gl.compileShader(o); return ctx.gl.getShaderParameter(o, ctx.gl.COMPILE_STATUS)?o:ctx.gl.getShaderInfoLog(o); };
-        const p = ctx.gl.createProgram(), vsh = s(ctx.gl.VERTEX_SHADER, ctx.vs), fsh = s(ctx.gl.FRAGMENT_SHADER, fs);
-        if(typeof vsh === 'string') return vsh; if(typeof fsh === 'string') return fsh;
-        ctx.gl.attachShader(p, vsh); ctx.gl.attachShader(p, fsh); ctx.gl.linkProgram(p);
-        const b = ctx.gl.createBuffer(); ctx.gl.bindBuffer(ctx.gl.ARRAY_BUFFER, b); ctx.gl.bufferData(ctx.gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]), ctx.gl.STATIC_DRAW);
-        const loc = ctx.gl.getAttribLocation(p, 'p'); ctx.gl.enableVertexAttribArray(loc); ctx.gl.vertexAttribPointer(loc, 2, ctx.gl.FLOAT, false, 0, 0);
-        ctx.prog = p; return null;
+        const gl=ctx.gl, p=gl.createProgram();
+        const s = (t,src)=>{const x=gl.createShader(t); gl.shaderSource(x,src); gl.compileShader(x); return gl.getShaderParameter(x,gl.COMPILE_STATUS)?x:gl.getShaderInfoLog(x);};
+        const v=s(gl.VERTEX_SHADER, ctx.vs), f=s(gl.FRAGMENT_SHADER, fs);
+        if(typeof f==='string') return f;
+        gl.attachShader(p,v); gl.attachShader(p,f); gl.linkProgram(p);
+        const b=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b); gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+        const l=gl.getAttribLocation(p,'p'); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0);
+        ctx.prog=p; return null;
     },
-    render: function(ctx, state, isR) {
+    render: (ctx, s, isR) => {
         if(!ctx.prog) return; const gl=ctx.gl;
-        if(!state.saving) { const dpr=window.devicePixelRatio||1; const w=Math.floor(ctx.cvs.clientWidth*dpr), h=Math.floor(ctx.cvs.clientHeight*dpr); if(ctx.cvs.width!==w||ctx.cvs.height!==h){ctx.cvs.width=w; ctx.cvs.height=h; gl.viewport(0,0,w,h);} }
+        if(!s.saving){const d=window.devicePixelRatio||1, w=Math.floor(ctx.cvs.clientWidth*d), h=Math.floor(ctx.cvs.clientHeight*d); if(ctx.cvs.width!==w||ctx.cvs.height!==h){ctx.cvs.width=w;ctx.cvs.height=h;gl.viewport(0,0,w,h);}}
         gl.useProgram(ctx.prog);
-        const u=(n,v)=>{const l=gl.getUniformLocation(ctx.prog,n); if(typeof v==='number')gl.uniform1f(l,v); else gl.uniform2f(l,v[0],v[1]);};
-        const ui=(n,v)=>gl.uniform1i(gl.getUniformLocation(ctx.prog,n),v);
-        const cam = isR ? state.right : state.left;
-        u('u_res',[ctx.cvs.width, ctx.cvs.height]); u('u_offset',[cam.x,cam.y]); u('u_zoom',cam.z); u('u_c',[state.c.x, state.c.y]);
-        u('u_iter',state.p.iter); u('u_grid',state.p.grid); ui('u_mode',state.mode); ui('u_view',isR?1:0); ui('u_pal',state.p.pal);
+        const cam=isR?s.right:s.left, u=(n,v)=>gl.uniform1f(gl.getUniformLocation(ctx.prog,n),v), uv=(n,v)=>gl.uniform2f(gl.getUniformLocation(ctx.prog,n),v[0],v[1]);
+        gl.uniform1i(gl.getUniformLocation(ctx.prog,'u_pal'), s.p.pal);
+        gl.uniform1i(gl.getUniformLocation(ctx.prog,'u_mode'), s.mode);
+        gl.uniform1i(gl.getUniformLocation(ctx.prog,'u_view'), isR?1:0);
+        uv('u_res',[ctx.cvs.width, ctx.cvs.height]); uv('u_off',[cam.x,cam.y]); uv('u_c',[s.c.x,s.c.y]);
+        u('u_zoom',cam.z); u('u_iter',s.p.iter); u('u_grid',s.p.grid);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
 };
 
+// --- NEBULA CPU RENDERER ---
 class NebulaRenderer {
-    constructor(id) { this.cvs=document.getElementById(id); this.ctx=this.cvs.getContext('2d',{willReadFrequently:true}); this.hist=null; this.frames=0; }
-    reset() {
-        const dpr=window.devicePixelRatio||1; const w=Math.floor(this.cvs.clientWidth*dpr), h=Math.floor(this.cvs.clientHeight*dpr);
-        if(this.cvs.width!==w||this.cvs.height!==h){ this.cvs.width=w; this.cvs.height=h; this.hist=new Float32Array(w*h*3); this.imgData=this.ctx.createImageData(w,h); }
+    constructor(id){this.cvs=document.getElementById(id); this.ctx=this.cvs.getContext('2d',{willReadFrequently:true}); this.hist=null; this.frames=0;}
+    reset(){
+        const d=window.devicePixelRatio||1, w=Math.floor(this.cvs.clientWidth*d), h=Math.floor(this.cvs.clientHeight*d);
+        if(this.cvs.width!==w||this.cvs.height!==h){this.cvs.width=w; this.cvs.height=h; this.hist=new Float32Array(w*h*3); this.imgData=this.ctx.createImageData(w,h);}
         if(this.hist) this.hist.fill(0); this.frames=0;
     }
     renderBatch(state, isR) {
-        if(!this.hist) return; const w=this.cvs.width, h=this.cvs.height; const cam = isR?state.right:state.left;
-        const vh = 1.0/cam.z, vw = (w/h)*vh; const minX=cam.x-vw/2, minY=cam.y-vh/2;
-        const batch=30000; const p=state.p, max_i=p.iter; const trX=new Float32Array(max_i), trY=new Float32Array(max_i);
-        const isAtl=(state.mode===2 && isR); const wts = vh/p.grid; this.frames++;
+        if(!this.hist) return; const w=this.cvs.width, h=this.cvs.height, cam=isR?state.right:state.left, p=state.p;
+        const vh=1.0/cam.z, vw=(w/h)*vh, minX=cam.x-vw/2, minY=cam.y-vh/2, max_i=p.iter;
+        const trX=new Float32Array(max_i), trY=new Float32Array(max_i);
+        const isAtl=(state.mode===2 && isR), grid=p.grid, tileSize=4.0/grid; // Correct grid scaling
+        this.frames++;
 
-        for(let i=0; i<batch; i++) {
-            let cr, ci, zx, zy, cx, cy;
-            let rx = minX + Math.random()*vw, ry = minY + Math.random()*vh;
+        for(let i=0; i<20000; i++) {
+            let cr, ci, zx, zy, cellX, cellY;
             if(isAtl) {
-                cx = (Math.floor(rx/wts)+0.5)*wts; cy = (Math.floor(ry/wts)+0.5)*wts;
-                cr = cx*4.0; ci = cy*4.0; zx = (Math.random()-0.5)*3.0; zy = (Math.random()-0.5)*3.0;
+                // NEBULA ATLAS LOGIC
+                let rx = Math.random()*vw + minX, ry = Math.random()*vh + minY;
+                let tx = Math.floor(rx / (1.0/(cam.z*grid/4.0))), ty = Math.floor(ry / (1.0/(cam.z*grid/4.0))); // Rough cell find
+                // Force align to tiles
+                cellX = Math.floor(Math.random()*grid*2 - grid); 
+                cellY = Math.floor(Math.random()*grid*2 - grid);
+                // Actually, project screen to cell index
+                let u = Math.random(), v = Math.random();
+                let screenX = minX + u*vw, screenY = minY + v*vh;
+                let worldScale = 1.0/(cam.z*p.grid*0.25);
+                let cx = Math.floor(screenX / worldScale), cy = Math.floor(screenY / worldScale);
+                
+                cr = (cx+0.5) * worldScale * 4.0; ci = (cy+0.5) * worldScale * 4.0; // Center
+                zx = (Math.random()-0.5)*3.0; zy = (Math.random()-0.5)*3.0;
+                cellX = cx; cellY = cy;
             } else {
-                if(isR) { cr=state.c.x; ci=state.c.y; zx=rx*3.0; zy=ry*3.0; } else { cr=rx*4.0; ci=ry*4.0; zx=0; zy=0; }
+                let sr=cam.x+(Math.random()-0.5)*vw*1.2, si=cam.y+(Math.random()-0.5)*vh*1.2;
+                if(isR){cr=state.c.x;ci=state.c.y;zx=sr;zy=si;} else{cr=sr;ci=si;zx=0;zy=0;}
             }
+            
             let step=0, esc=false, d_min=1000.0, eq=p.eqMode, cp=p.customPow;
             while(step<max_i) {
                 trX[step]=zx; trY[step]=zy; let nx, ny;
-                if(eq===0){nx=zx*zx-zy*zy+cr; ny=2.0*zx*zy+ci;}else if(eq===1){nx=zx*zx*zx-3.0*zx*zy*zy+cr; ny=3.0*zx*zx*zy-zy*zy*zy+ci;}else if(eq===2){nx=zx*zx*zx*zx-6.0*zx*zx*zy*zy+zy*zy*zy*zy+cr; ny=4.0*zx*zx*zx*zy-4.0*zx*zy*zy*zy+ci;}else if(eq===3){let r2=zx*zx+zy*zy;let r4=r2*r2;let r5=r4*Math.sqrt(r2);let a=Math.atan2(zy,zx)*5.0;nx=r5*Math.cos(a)+cr;ny=r5*Math.sin(a)+ci;}else if(eq===4){nx=zx*zx-zy*zy+cr;ny=2.0*Math.abs(zx*zy)+ci;}else if(eq===5){nx=zx*zx-zy*zy+cr;ny=-2.0*zx*zy+ci;}else if(eq===6){let ey=Math.exp(zy),e_y=Math.exp(-zy);nx=Math.sin(zx)*(ey+e_y)/2+cr;ny=Math.cos(zx)*(ey-e_y)/2+ci;}else if(eq===7){let ey=Math.exp(zy),e_y=Math.exp(-zy);nx=Math.cos(zx)*(ey+e_y)/2+cr;ny=-Math.sin(zx)*(ey-e_y)/2+ci;}else{let r=Math.sqrt(zx*zx+zy*zy),a=Math.atan2(zy,zx),rn=Math.pow(r,cp);nx=rn*Math.cos(a*cp)+cr;ny=rn*Math.sin(a*cp)+ci;}
-                zx=nx; zy=ny; let m=zx*zx+zy*zy; if(m<d_min) d_min=m; if(m>100.0){esc=true;break;} step++;
+                // Unrolled Math
+                if(eq===0){nx=zx*zx-zy*zy+cr; ny=2.0*zx*zy+ci;} else if(eq===1){nx=zx*zx*zx-3.0*zx*zy*zy+cr; ny=3.0*zx*zx*zy-zy*zy*zy+ci;}
+                else if(eq===4){nx=zx*zx-zy*zy+cr;ny=2.0*Math.abs(zx*zy)+ci;} else {let r2=zx*zx+zy*zy; if(r2>100){esc=true; break;} let r=Math.sqrt(r2), a=Math.atan2(zy,zx), n=(eq==2?4:eq==3?5:cp); let rn=Math.pow(r,n); nx=rn*Math.cos(a*n)+cr; ny=rn*Math.sin(a*n)+ci;}
+                zx=nx; zy=ny; let m=zx*zx+zy*zy; if(m<d_min)d_min=m; if(m>100){esc=true;break;} step++;
             }
+            
             if(esc && step>0) {
-                let glow = Math.exp(-d_min*10.0);
+                let glow = Math.exp(-d_min*5.0);
                 for(let s=0; s<step; s++) {
-                    let twx = isAtl ? cx + (trX[s]/3.0)*wts : (isR ? minX+((trX[s]/3.0)+0.5)*vw : trX[s]/4.0);
-                    let twy = isAtl ? cy + (trY[s]/3.0)*wts : (isR ? minY+((trY[s]/3.0)+0.5)*vh : trY[s]/4.0);
-                    let px = Math.floor((twx-minX)/vw*w), py = Math.floor(((twy-minY)/vh)*h);
+                    let px, py;
+                    if(isAtl) {
+                        // Project local trajectory (-1.5 to 1.5) back to world grid tile
+                        let worldScale = 1.0/(cam.z*p.grid*0.25);
+                        let wx = (cellX+0.5)*worldScale + (trX[s]/3.0)*worldScale;
+                        let wy = (cellY+0.5)*worldScale + (trY[s]/3.0)*worldScale;
+                        px = Math.floor((wx-minX)/vw*w); py = Math.floor((wy-minY)/vh*h);
+                    } else {
+                        px = Math.floor((trX[s]-minX)/vw*w); py = Math.floor((trY[s]-minY)/vh*h);
+                    }
                     if(px>=0&&px<w&&py>=0&&py<h) {
-                        let idx = ((h-1-py)*w+px)*3;
-                        if(step>p.r) this.hist[idx]+=glow; if(step>p.g) this.hist[idx+1]+=glow; if(step>p.b) this.hist[idx+2]+=glow;
+                        let idx=((h-1-py)*w+px)*3; if(step>p.r)this.hist[idx]+=glow; if(step>p.g)this.hist[idx+1]+=glow; if(step>p.b)this.hist[idx+2]+=glow;
                     }
                 }
             }
         }
-        const data=this.imgData.data; let j=0; const gain=isR?20.0:800.0, scale=(p.den*gain)/this.frames, norm=1.0/Math.log1p(gain);
+        const data=this.imgData.data; const scale=(p.den*(isR?20:800))/this.frames; let j=0;
         for(let i=0; i<w*h*3; i+=3) {
             let py=Math.floor((i/3)/w), px=(i/3)%w;
-            let wx=minX+(px/w)*vw, wy=minY+((h-1-py)/h)*vh;
-            let isBorder = false;
-            if(isAtl) { let tx=Math.abs((wx/wts)-Math.round(wx/wts)), ty=Math.abs((wy/wts)-Math.round(wy/wts)); if((tx*w/vw)<1.0 || (ty*h/vh)<1.0) isBorder=true; }
-            if(isBorder) { data[j++]=50; data[j++]=50; data[j++]=50; data[j++]=255; } else {
-                data[j++]=Math.min(255,Math.pow(Math.log1p(this.hist[i]*scale)*norm,1.2)*255);
-                data[j++]=Math.min(255,Math.pow(Math.log1p(this.hist[i+1]*scale)*norm,1.2)*255);
-                data[j++]=Math.min(255,Math.pow(Math.log1p(this.hist[i+2]*scale)*norm,1.2)*255); data[j++]=255;
+            // Draw Grid Lines on CPU Canvas
+            let wx=minX+(px/w)*vw, wy=minY+((h-1-py)/h)*vh, isGrid=false;
+            if(isAtl) { 
+                let ts=1.0/(cam.z*p.grid*0.25); 
+                let gx=Math.abs((wx/ts)-Math.round(wx/ts)), gy=Math.abs((wy/ts)-Math.round(wy/ts));
+                if((gx*w/vw)<0.8 || (gy*h/vh)<0.8) isGrid=true;
+            }
+            if(isGrid) { data[j++]=30; data[j++]=30; data[j++]=30; data[j++]=255; } else {
+                data[j++]=Math.min(255, Math.pow(Math.log1p(this.hist[i]*scale),1.2)*255);
+                data[j++]=Math.min(255, Math.pow(Math.log1p(this.hist[i+1]*scale),1.2)*255);
+                data[j++]=Math.min(255, Math.pow(Math.log1p(this.hist[i+2]*scale),1.2)*255); data[j++]=255;
             }
         }
         this.ctx.putImageData(this.imgData,0,0);
+        // Seed Dot
         if(!isR && state.mode!==2) {
-            const sx=(state.c.x/4.0-cam.x)/vw*w, sy=h-(state.c.y/4.0-cam.y)/vh*h;
-            this.ctx.beginPath(); this.ctx.arc(sx,sy,5,0,Math.PI*2); this.ctx.fillStyle='white'; this.ctx.fill(); this.ctx.lineWidth=2; this.ctx.strokeStyle='black'; this.ctx.stroke();
+            const sx=(state.c.x-cam.x)/vw*w, sy=h-(state.c.y-cam.y)/vh*h;
+            this.ctx.beginPath(); this.ctx.arc(sx,sy,5,0,Math.PI*2); this.ctx.fillStyle='#fff'; this.ctx.fill(); this.ctx.strokeStyle='#000'; this.ctx.stroke();
         }
     }
 }
 
-// =======================================================
-// MAIN APP
-// =======================================================
+// --- APP ---
 const app = {
-    state: { mode:0, locked:false, saving:false, c:{x:-0.76,y:0.12}, left:{x:0.0,y:0.0,z:1.0}, right:{x:0.0,y:0.0,z:1.0}, p:{eqMode:0, customPow:2, iter:300, grid:10, pal:0, den:1.5, r:200, g:100, b:50}, drag:false, dragPoint:false, active:null, last:{x:0,y:0} },
+    state: { mode:0, c:{x:-0.76,y:0.12}, left:{x:0,y:0,z:1}, right:{x:0,y:0,z:1}, p:{iter:300, grid:10, pal:0, den:1.5, r:200, g:100, b:50, eqMode:0}, drag:false, active:null, last:{x:0,y:0} },
     glCtx: [], nebCtx: [],
     init: function() {
-        this.glCtx = [GL_CORE.setup('gl-left'), GL_CORE.setup('gl-right')];
-        this.nebCtx = [new NebulaRenderer('cpu-left'), new NebulaRenderer('cpu-right')];
+        this.glCtx=[GL.setup('gl-left'), GL.setup('gl-right')]; this.nebCtx=[new NebulaRenderer('cpu-left'), new NebulaRenderer('cpu-right')];
         ui.init(); this.compile(); this.loop();
     },
-    loadPreset: function() { document.getElementById('inp-eq').value = document.getElementById('sel-preset').value; this.compile(); },
     compile: function() {
-        const rawEq = document.getElementById('inp-eq').value, glslEq = parseEquation(rawEq);
-        let err = null; this.glCtx.forEach(c => { let r=GL_CORE.compile(c, glslEq); if(r) err=r; });
-        const log = document.getElementById('error-log');
-        if(err) { log.style.display='block'; log.innerText=`GLSL ERROR:\nCannot parse "${rawEq}".\n\n${err}`; } 
-        else { log.style.display='none'; this.triggerReset(); }
+        const eq=document.getElementById('inp-eq').value, glsl=parseEquation(eq);
+        let err=null; this.glCtx.forEach(c=>{let r=GL.compile(c,glsl); if(r)err=r;});
+        const log=document.getElementById('error-log'); 
+        if(err){log.style.display='block'; log.innerText="GLSL ERROR: "+err;} else {log.style.display='none'; this.triggerReset();}
     },
+    loadPreset: function() { document.getElementById('inp-eq').value = document.getElementById('sel-preset').value; this.compile(); },
     triggerReset: function() { ui.updParams(); this.nebCtx[0].reset(); this.nebCtx[1].reset(); },
+    resetPos: function() { this.state.left={x:0,y:0,z:1}; this.state.right={x:0,y:0,z:1}; this.triggerReset(); },
     loop: function() {
         if(!this.state.saving) {
-            if(this.state.mode===0) { GL_CORE.render(this.glCtx[0], this.state, false); GL_CORE.render(this.glCtx[1], this.state, true); }
-            else if(this.state.mode===1) { this.nebCtx[0].renderBatch(this.state, false); this.nebCtx[1].renderBatch(this.state, true); }
-            else { GL_CORE.render(this.glCtx[0], this.state, false); this.nebCtx[1].renderBatch(this.state, true); }
+            const m=this.state.mode;
+            if(m===0) { GL.render(this.glCtx[0],this.state,false); GL.render(this.glCtx[1],this.state,true); }
+            else if(m===1) { this.nebCtx[0].renderBatch(this.state,false); this.nebCtx[1].renderBatch(this.state,true); }
+            else { GL.render(this.glCtx[0],this.state,false); this.nebCtx[1].renderBatch(this.state,true); }
         }
-        document.getElementById('zoom-warning').style.display = (Math.max(this.state.left.z, this.state.right.z) > 100000 && this.state.mode!==1) ? 'block' : 'none';
+        document.getElementById('zoom-warning').style.display = (Math.max(this.state.left.z, this.state.right.z)>100000 && this.state.mode!==1)?'block':'none';
         requestAnimationFrame(()=>this.loop());
     },
     setMode: function(m) {
-        this.state.mode=m; document.getElementById('app-body').className=m===1?'mode-nebula':(m===2?'mode-atlas':'');
+        this.state.mode=m; document.getElementById('app-body').className = m===1?'mode-nebula':(m===2?'mode-atlas':'');
         document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===m));
         document.getElementById('lbl-left').innerText=m===1?"Buddhabrot":(m===2?"Julia Atlas":"Mandelbrot");
         document.getElementById('lbl-right').innerText=m===1?"Nebula Julia":(m===2?"Nebula Atlas":"Julia Set");
         ui.updControls(); this.triggerReset();
     },
-    resetPos: function() { this.state.left={x:0,y:0,z:1}; this.state.right={x:0,y:0,z:1}; this.triggerReset(); },
     save: function() {
-        const view = document.getElementById('save-view').value, res = document.getElementById('save-res').value, isR = (view==='right'), useCpu = (this.state.mode===1 || (this.state.mode===2&&isR));
-        let tgt;
-        if(useCpu) { tgt = isR ? this.nebCtx[1].cvs : this.nebCtx[0].cvs; } 
-        else {
-            this.state.saving=true; const ctx = isR ? this.glCtx[1] : this.glCtx[0]; const ow = ctx.cvs.width, oh = ctx.cvs.height;
-            let w=ow, h=oh; if(res==='2'){w=1920;h=1080;} else if(res==='4'){w=3840;h=2160;} else if(res==='8'){w=7680;h=4320;} else if(res==='custom'){w=parseInt(document.getElementById('save-w').value)||1920;h=parseInt(document.getElementById('save-h').value)||1080;}
-            ctx.cvs.width=w; ctx.cvs.height=h; ctx.gl.viewport(0,0,w,h); GL_CORE.render(ctx, this.state, isR); tgt=ctx.cvs;
+        const view=document.getElementById('save-view').value, res=document.getElementById('save-res').value, isR=(view==='right');
+        const useCpu=(this.state.mode===1 || (this.state.mode===2&&isR));
+        if(useCpu) {
+            const a=document.createElement('a'); a.download=`fractal_${Date.now()}.png`; a.href=(isR?this.nebCtx[1]:this.nebCtx[0]).cvs.toDataURL(); a.click();
+        } else {
+            this.state.saving=true; const ctx=isR?this.glCtx[1]:this.glCtx[0], ow=ctx.cvs.width, oh=ctx.cvs.height;
+            let w=ow, h=oh; if(res==='2'){w=1920;h=1080;} else if(res==='4'){w=3840;h=2160;} else if(res==='8'){w=7680;h=4320;} else if(res==='custom'){w=parseInt(document.getElementById('save-w').value); h=parseInt(document.getElementById('save-h').value);}
+            ctx.cvs.width=w; ctx.cvs.height=h; ctx.gl.viewport(0,0,w,h); GL.render(ctx,this.state,isR);
+            const a=document.createElement('a'); a.download=`fractal_${Date.now()}.png`; a.href=ctx.cvs.toDataURL(); a.click();
+            ctx.cvs.width=ow; ctx.cvs.height=oh; this.state.saving=false;
         }
-        const a = document.createElement('a'); a.download=`fractal_${Date.now()}.png`; a.href=tgt.toDataURL('image/png'); a.click();
-        if(!useCpu) { const ctx=isR?this.glCtx[1]:this.glCtx[0]; ctx.cvs.width=ctx.cvs.clientWidth*(window.devicePixelRatio||1); ctx.cvs.height=ctx.cvs.clientHeight*(window.devicePixelRatio||1); this.state.saving=false; }
         ui.toggleModal(false);
     }
 };
@@ -417,56 +455,64 @@ const ui = {
         this.updParams = () => { const v=id=>parseFloat(document.getElementById(id).value), p=app.state.p; p.iter=v('sl-iter'); p.grid=v('sl-grid'); p.r=v('sl-red'); p.g=v('sl-grn'); p.b=v('sl-blu'); p.den=v('sl-den'); p.pal=parseInt(document.getElementById('sel-pal').value); ['iter','grid','red','grn','blu'].forEach(k=>document.getElementById(`val-${k}`).innerText=v(`sl-${k}`)); };
         document.querySelectorAll('input[type=range], select').forEach(e=>{e.addEventListener('input',this.updParams); if(e.id!=='sel-preset')e.addEventListener('change',()=>app.triggerReset());});
         
-        document.querySelectorAll('.canvas-container').forEach((cont, idx) => {
-            const isR = idx===1;
-            const handleInteract = (clientX, clientY, isDown) => {
-                const r = cont.getBoundingClientRect(), cam = isR ? app.state.right : app.state.left;
-                const asp = cont.clientWidth/cont.clientHeight, nx = ((clientX-r.left)/cont.clientWidth-0.5)*asp, ny = -((clientY-r.top)/cont.clientHeight-0.5);
-                const wx = nx/cam.z+cam.x, wy = ny/cam.z+cam.y;
-                
-                if(isDown && !isR && app.state.mode!==2 && !app.state.locked) {
-                    const pDist = Math.hypot(wx - app.state.c.x/4.0, wy - app.state.c.y/4.0) * cam.z * cont.clientHeight;
-                    if(pDist < 30) { app.state.dragPoint=true; app.state.drag=false; return; }
-                    app.state.c.x = wx*4.0; app.state.c.y = wy*4.0; document.getElementById('c-coords').innerText=`C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
+        // INPUT HANDLER (Unified Mouse/Touch)
+        const handleInput = (e, type, cont, isR) => {
+            const clientX = e.clientX || e.touches[0].clientX, clientY = e.clientY || e.touches[0].clientY;
+            
+            if(type === 'start') {
+                app.state.active = isR ? 'r' : 'l'; app.state.drag = true; app.state.last = {x:clientX, y:clientY};
+                // Check Dot Click
+                if(!isR && app.state.mode !== 2 && !app.state.locked) {
+                    const r = cont.getBoundingClientRect(), cam = app.state.left;
+                    const asp = cont.clientWidth/cont.clientHeight, nx = ((clientX-r.left)/cont.clientWidth-0.5)*asp, ny = -((clientY-r.top)/cont.clientHeight-0.5);
+                    const wx = nx/cam.z+cam.x, wy = ny/cam.z+cam.y;
+                    const dist = Math.hypot(wx - app.state.c.x, wy - app.state.c.y) * cam.z * cont.clientHeight;
+                    
+                    if(dist < 30) { app.state.dragPoint = true; app.state.drag = false; return; } // Grabbed Dot
+                    
+                    // Teleport Dot
+                    app.state.c.x = wx; app.state.c.y = wy; 
+                    document.getElementById('c-coords').innerText = `C: ${wx.toFixed(4)}, ${wy.toFixed(4)}`;
                     if(app.state.mode===1) app.triggerReset();
                 }
+            } else if(type === 'move' && (app.state.drag || app.state.dragPoint)) {
+                if(app.state.active !== (isR?'r':'l')) return;
+                const r = cont.getBoundingClientRect(), cam = isR ? app.state.right : app.state.left;
                 
                 if(app.state.dragPoint && !isR) {
-                    app.state.c.x = wx*4.0; app.state.c.y = wy*4.0; document.getElementById('c-coords').innerText=`C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
+                    const asp = cont.clientWidth/cont.clientHeight, nx = ((clientX-r.left)/cont.clientWidth-0.5)*asp, ny = -((clientY-r.top)/cont.clientHeight-0.5);
+                    app.state.c.x = nx/cam.z+cam.x; app.state.c.y = ny/cam.z+cam.y;
+                    document.getElementById('c-coords').innerText = `C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
                     if(app.state.mode===1) app.triggerReset();
-                } else if(app.state.drag) {
+                } else {
+                    // Panning
                     const dx = clientX - app.state.last.x, dy = clientY - app.state.last.y;
-                    cam.x -= (dx/cont.clientHeight)/cam.z; cam.y += (dy/cont.clientHeight)/cam.z;
+                    const asp = cont.clientWidth/cont.clientHeight;
+                    cam.x -= (dx/cont.clientHeight)/cam.z * asp; cam.y += (dy/cont.clientHeight)/cam.z;
                     if(app.state.mode!==0) app.triggerReset();
                 }
                 app.state.last = {x:clientX, y:clientY};
-            };
+            }
+        };
 
-            // Mouse Events
-            cont.addEventListener('dblclick', () => { app.state.locked=!app.state.locked; document.getElementById('lock-indicator').style.display=app.state.locked?'block':'none'; });
-            cont.addEventListener('mousedown', e => { app.state.active=isR?'r':'l'; app.state.drag=true; app.state.last={x:e.clientX,y:e.clientY}; handleInteract(e.clientX, e.clientY, true); });
-            cont.addEventListener('mousemove', e => { if(app.state.active===(isR?'r':'l') && (app.state.drag||app.state.dragPoint)) handleInteract(e.clientX, e.clientY, false); });
-            cont.addEventListener('wheel', e => { e.preventDefault(); const cam=isR?app.state.right:app.state.left, spd=parseFloat(document.getElementById('sl-zoom').value)*0.1; if(e.deltaY<0) cam.z*=(1+spd); else cam.z/=(1+spd); if(app.state.mode!==0) app.triggerReset(); });
-
-            // Touch Events (Mobile Support)
-            let initDist = 0, initZoom = 1;
-            cont.addEventListener('touchstart', e => {
-                app.state.active=isR?'r':'l';
-                if(e.touches.length===1) { app.state.drag=true; app.state.last={x:e.touches[0].clientX, y:e.touches[0].clientY}; handleInteract(e.touches[0].clientX, e.touches[0].clientY, true); }
-                else if(e.touches.length===2) { app.state.drag=false; app.state.dragPoint=false; initDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); initZoom=(isR?app.state.right.z:app.state.left.z); }
-            });
-            cont.addEventListener('touchmove', e => {
-                e.preventDefault();
-                if(e.touches.length===1 && (app.state.drag||app.state.dragPoint)) handleInteract(e.touches[0].clientX, e.touches[0].clientY, false);
-                else if(e.touches.length===2) { const dist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); (isR?app.state.right:app.state.left).z = initZoom*(dist/initDist); if(app.state.mode!==0) app.triggerReset(); }
-            });
+        document.querySelectorAll('.canvas-container').forEach((cont, idx) => {
+            const isR = idx===1;
+            cont.addEventListener('dblclick', ()=>{app.state.locked=!app.state.locked; document.getElementById('lock-indicator').style.display=app.state.locked?'block':'none';});
+            cont.addEventListener('mousedown', e => handleInput(e, 'start', cont, isR));
+            cont.addEventListener('mousemove', e => handleInput(e, 'move', cont, isR));
+            cont.addEventListener('touchstart', e => { if(e.touches.length===1) handleInput(e, 'start', cont, isR); });
+            cont.addEventListener('touchmove', e => { if(e.touches.length===1) handleInput(e, 'move', cont, isR); });
+            
+            const handleZoom = (d) => { const c=isR?app.state.right:app.state.left, s=parseFloat(document.getElementById('sl-zoom').value)*0.1; if(d<0)c.z*=(1+s);else c.z/=(1+s); if(app.state.mode!==0)app.triggerReset(); };
+            cont.addEventListener('wheel', e => { e.preventDefault(); handleZoom(e.deltaY); });
         });
-        window.addEventListener('mouseup', () => {app.state.drag=false; app.state.dragPoint=false;});
-        window.addEventListener('touchend', () => {app.state.drag=false; app.state.dragPoint=false;});
+        window.addEventListener('mouseup', ()=>{app.state.drag=false; app.state.dragPoint=false;});
+        window.addEventListener('touchend', ()=>{app.state.drag=false; app.state.dragPoint=false;});
     },
-    toggleModal: function(show) { document.getElementById('save-modal').style.display=show?'flex':'none'; document.getElementById('row-res').style.display=(app.state.mode===1||(app.state.mode===2&&document.getElementById('save-view').value==='right'))?'none':'block'; },
-    checkCustomRes: function() { document.getElementById('custom-res-div').style.display = (document.getElementById('save-res').value==='custom')?'flex':'none'; },
-    updControls: function() { const m=app.state.mode, s=(id,v)=>document.getElementById(id).classList.toggle('hidden',!v); s('grp-neb-r',m!==0); s('grp-neb-g',m!==0); s('grp-neb-b',m!==0); s('grp-neb-den',m!==0); s('grp-pal',m===0); s('grp-grid',m===2); }
+    toggleSettings: () => document.getElementById('settings-menu').classList.toggle('open'),
+    toggleModal: (s) => { document.getElementById('save-modal').style.display=s?'flex':'none'; document.getElementById('row-res').style.display=(app.state.mode===1||(app.state.mode===2&&document.getElementById('save-view').value==='right'))?'none':'block'; },
+    checkCustomRes: () => document.getElementById('custom-res-div').style.display=(document.getElementById('save-res').value==='custom')?'flex':'none',
+    updControls: () => { const m=app.state.mode, s=(id,v)=>document.getElementById(id).classList.toggle('hidden',!v); s('grp-nebula',m!==0); s('grp-std',m===0); s('grp-atlas',m===2); }
 };
 window.onload = () => app.init();
 </script>
