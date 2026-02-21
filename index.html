@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Atlas (Fixed)</title>
+    <title>Fractal Atlas - Pro</title>
     <style>
         /* UI & LAYOUT STYLES */
         :root {
@@ -45,7 +45,7 @@
         /* CONTROLS */
         #controls {
             height: 150px; background: #080808; border-top: 1px solid #333;
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 15px; padding: 15px; align-items: center;
         }
         .control-group { display: flex; flex-direction: column; gap: 5px; }
@@ -53,6 +53,11 @@
         input[type="range"] { width: 100%; cursor: pointer; }
         .val-disp { font-size: 11px; color: var(--accent); float: right; }
         
+        /* Colored Labels for Channels */
+        .lbl-r { color: #ff6b6b; }
+        .lbl-g { color: #51cf66; }
+        .lbl-b { color: #339af0; }
+
         .action-btn {
             background: #333; color: white; border: 1px solid #555;
             padding: 10px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold;
@@ -66,7 +71,6 @@
             font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: none;
         }
 
-        /* ERROR BOX (Hidden unless broken) */
         #error-box {
             display: none; position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
             background: #500; color: #fff; padding: 20px; border: 2px solid #f00; z-index: 999;
@@ -83,7 +87,8 @@
 <body>
 
 <header>
-    <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
+    <!-- The Left Arrow is the Back Button for the Hub -->
+    <button id="back-btn" onclick="window.parent.goBack()" title="Back to Menu">&#8592;</button>
     <div class="mode-tabs">
         <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
         <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
@@ -108,9 +113,10 @@
 <div id="c-coords">C: -0.7600, 0.1200</div>
 
 <div id="controls">
+    <!-- Standard Controls -->
     <div class="control-group">
-        <label>Iterations <span id="val-iter" class="val-disp">100</span></label>
-        <input type="range" id="sl-iter" min="20" max="500" value="100">
+        <label>Total Iterations <span id="val-iter" class="val-disp">300</span></label>
+        <input type="range" id="sl-iter" min="50" max="500" value="300">
     </div>
 
     <div class="control-group">
@@ -118,117 +124,94 @@
         <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
     </div>
 
+    <!-- Nebula RGB Controls -->
     <div class="control-group">
-        <label>Atlas Grid <span id="val-grid" class="val-disp">10</span></label>
-        <input type="range" id="sl-grid" min="2" max="50" step="1" value="10">
+        <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
+        <input type="range" id="sl-red" min="0" max="500" value="200">
+    </div>
+    <div class="control-group">
+        <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
+        <input type="range" id="sl-grn" min="0" max="500" value="100">
+    </div>
+    <div class="control-group">
+        <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
+        <input type="range" id="sl-blu" min="0" max="500" value="50">
     </div>
 
     <div class="control-group">
-        <label>Color Shift</label>
-        <input type="range" id="sl-color" min="0" max="1" step="0.01" value="0.5">
-    </div>
-
-    <div class="control-group">
-        <label>Glow (Nebula)</label>
-        <input type="range" id="sl-glow" min="0.1" max="3.0" step="0.1" value="1.2">
+        <label>Brightness / Glow</label>
+        <input type="range" id="sl-glow" min="0.5" max="5.0" step="0.1" value="2.0">
     </div>
     
     <button class="action-btn" onclick="app.resetViews()">RESET VIEW</button>
 </div>
 
-<!-- ========================================== -->
-<!--            VERTEX SHADER                   -->
-<!-- ========================================== -->
+<!-- SHADERS -->
 <script id="vs-source" type="x-shader/x-vertex">
     attribute vec2 a_position;
-    void main() {
-        gl_Position = vec4(a_position, 0.0, 1.0);
-    }
+    void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
 </script>
 
-<!-- ========================================== -->
-<!--           FRAGMENT SHADER                  -->
-<!-- ========================================== -->
 <script id="fs-source" type="x-shader/x-fragment">
     precision highp float;
 
-    // Uniforms passed from JS
     uniform vec2 u_res;
     uniform vec2 u_offset;
     uniform float u_zoom;
-    uniform vec2 u_c;
+    uniform vec2 u_c; // Current User Selected C
     
     uniform int u_type;    // 0=Mandel, 1=Julia, 2=AtlasMandel, 3=AtlasJulia
     uniform int u_style;   // 0=Std, 1=Nebula
+    uniform int u_show_dot; // 1=Draw the dot, 0=No dot
     
     uniform float u_iter;
-    uniform float u_color;
+    uniform float u_lim_r;
+    uniform float u_lim_g;
+    uniform float u_lim_b;
     uniform float u_glow;
     uniform float u_grid;
 
-    // Palette Function
+    // Standard Palette
     vec3 palette(float t) {
         vec3 a = vec3(0.5, 0.5, 0.5);
         vec3 b = vec3(0.5, 0.5, 0.5);
         vec3 c = vec3(1.0, 1.0, 1.0);
         vec3 d = vec3(0.3, 0.20, 0.20);
-        return a + b * cos(6.28318 * (c * t * u_color + d));
+        return a + b * cos(6.28318 * (c * t + d));
     }
 
     void main() {
-        // Fix aspect ratio
         vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
         
         vec2 z = vec2(0.0);
         vec2 c = vec2(0.0);
         float zoom = u_zoom;
-        
-        // --- LOGIC SPLIT FOR MODES ---
-        
+        vec2 offset = u_offset;
+
+        // --- ATLAS LOGIC ---
         if (u_type >= 2) { 
-            // ATLAS MODE
             vec2 grid_uv = uv * u_grid;
             vec2 cell_id = floor(grid_uv);
-            
-            // Local UV inside the tiny tile
             uv = fract(grid_uv) - 0.5; 
+            vec2 c_map = (cell_id / u_grid) * 3.0; 
             
-            // Calculate C based on tile position
-            vec2 c_map = (cell_id / u_grid) * 3.0; // Map grid to complex plane
-            
-            if (u_type == 2) {
-                z = uv * 3.0; // Show Julia
-                c = c_map;    // Use Grid as C
-            } else {
-                // Rare case
-                z = vec2(0.0);
-                c = uv * 3.0 + c_map;
-            }
-        } else {
-            // STANDARD MODE
-            uv = uv / zoom + u_offset;
-            
-            if (u_type == 0) {
-                // Mandelbrot
-                z = vec2(0.0);
-                c = uv;
-            } else {
-                // Julia
-                z = uv;
-                c = u_c;
-            }
+            if (u_type == 2) { z = uv * 3.0; c = c_map; } 
+            else { z = vec2(0.0); c = uv * 3.0 + c_map; }
+        } 
+        // --- STANDARD LOGIC ---
+        else {
+            uv = uv / zoom + offset;
+            if (u_type == 0) { z = vec2(0.0); c = uv; } 
+            else { z = uv; c = u_c; }
         }
 
-        // --- FRACTAL LOOP ---
-        // CRITICAL FIX: Loop limit must be constant integer for WebGL 1.0 compatibility
+        // --- CALCULATION ---
         float iter = 0.0;
-        float min_dist = 100.0;
+        float min_dist = 100.0; // Orbit Trap
         float z_mag = 0.0;
-        
-        const int MAX_LOOP = 500; // Hard limit for shader compilation
+        const int MAX_LOOP = 500;
 
         for (int i = 0; i < MAX_LOOP; i++) {
-            // Dynamic break based on user slider
             if (float(i) > u_iter) break;
 
             float x = (z.x * z.x - z.y * z.y) + c.x;
@@ -246,17 +229,25 @@
         vec3 col = vec3(0.0);
 
         if (u_style == 1) {
-            // NEBULA STYLE
-            float glow = exp(-min_dist * u_glow);
-            float outer = iter / u_iter;
+            // --- NEBULA MODE (RGB THRESHOLDS) ---
+            // Visual Approximation of the Python "Step > Threshold" logic
+            // We use Orbit Trap (min_dist) for the "Structure"
+            // We use Iteration Count (iter) for the "Color Masking"
+
+            float brightness = exp(-min_dist * (2.0)); // Base structure
             
-            if (z_mag < 100.0) {
-                col = vec3(glow * 0.8, glow * 0.9, glow * 1.0);
-            } else {
-                col = vec3(0.0, outer * 0.2, outer * 0.4);
-            }
+            // Mask channels: 1.0 if iter > threshold, else 0.0 (smoothed)
+            float r = smoothstep(u_lim_r, u_lim_r + 5.0, iter);
+            float g = smoothstep(u_lim_g, u_lim_g + 5.0, iter);
+            float b = smoothstep(u_lim_b, u_lim_b + 5.0, iter);
+
+            // Combine
+            col = vec3(brightness * r, brightness * g, brightness * b);
+            
+            // Apply Overall Gain
+            col *= u_glow;
         } else {
-            // STANDARD STYLE
+            // --- STANDARD MODE ---
             if (z_mag < 100.0) {
                 col = vec3(0.0);
             } else {
@@ -265,20 +256,37 @@
             }
         }
 
-        // Draw Grid Lines in Atlas Mode
+        // --- OVERLAYS ---
+        
+        // 1. Grid Lines (Atlas Only)
         if (u_type >= 2) {
              vec2 guv = abs(fract(gl_FragCoord.xy / u_res.y * u_grid) - 0.5);
              if (guv.x > 0.48 || guv.y > 0.48) col *= 0.5;
+        }
+
+        // 2. The Dot (Indicates Selected C)
+        // Only draw on Mandelbrot (Type 0) and not in Atlas Mode
+        if (u_show_dot == 1 && u_type == 0) {
+            // Calculate distance in UV space from current pixel to u_c
+            // uv was calculated as: uv / zoom + offset
+            // We need to check if current 'c' (the pixel) is close to 'u_c' (the selection)
+            float d = distance(c, u_c);
+            
+            // Dot Size scales with zoom so it remains visible
+            float dot_size = 0.015 / zoom; 
+            
+            if (d < dot_size) {
+                col = vec3(1.0); // White Dot
+            }
+            if (d < dot_size * 1.2 && d > dot_size) {
+                col = vec3(0.0); // Black Outline
+            }
         }
 
         gl_FragColor = vec4(col, 1.0);
     }
 </script>
 
-
-<!-- ========================================== -->
-<!--              JAVASCRIPT                    -->
-<!-- ========================================== -->
 <script>
 const app = {
     state: {
@@ -286,21 +294,24 @@ const app = {
         c: { x: -0.76, y: 0.12 },
         left: { offset: {x: -0.5, y: 0.0}, zoom: 1.0 },
         right: { offset: {x: 0.0, y: 0.0}, zoom: 1.0 },
-        params: { iter: 100, grid: 10, color: 0.5, glow: 1.2 },
+        params: { 
+            iter: 300, 
+            grid: 10, 
+            r_lim: 200, g_lim: 100, b_lim: 50, 
+            glow: 2.0 
+        },
         dragging: false,
         lastMouse: {x:0, y:0},
         activeCanvas: null
     },
     
-    contexts: [], // Stores [ctxLeft, ctxRight]
+    contexts: [],
 
     init: function() {
         this.contexts = [
             this.setupWebGL('canvas-left'),
             this.setupWebGL('canvas-right')
         ];
-
-        // Start Loop
         if(this.contexts[0] && this.contexts[1]) {
             this.loop();
             this.attachEvents();
@@ -309,26 +320,21 @@ const app = {
 
     setupWebGL: function(id) {
         const canvas = document.getElementById(id);
-        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        // CRITICAL FIX: preserveDrawingBuffer allows saveImage to work
+        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true }) || canvas.getContext('experimental-webgl');
         
-        if (!gl) {
-            this.showError("WebGL not supported on this browser.");
-            return null;
-        }
+        if (!gl) { this.showError("WebGL error."); return null; }
 
-        // Create Program
         const prog = gl.createProgram();
         const vs = this.compile(gl, 'vs-source', gl.VERTEX_SHADER);
         const fs = this.compile(gl, 'fs-source', gl.FRAGMENT_SHADER);
-        
-        if (!vs || !fs) return null; // Error handled in compile
+        if (!vs || !fs) return null;
 
         gl.attachShader(prog, vs);
         gl.attachShader(prog, fs);
         gl.linkProgram(prog);
         gl.useProgram(prog);
 
-        // Buffer
         const buff = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, buff);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
@@ -336,7 +342,7 @@ const app = {
         gl.enableVertexAttribArray(posLoc);
         gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-        return { gl, prog, canvas, id };
+        return { gl, prog, canvas };
     },
 
     compile: function(gl, id, type) {
@@ -344,36 +350,30 @@ const app = {
         const shader = gl.createShader(type);
         gl.shaderSource(shader, script.textContent);
         gl.compileShader(shader);
-        
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            this.showError("Shader Compile Error:\n" + gl.getShaderInfoLog(shader));
+            this.showError(gl.getShaderInfoLog(shader));
             return null;
         }
         return shader;
     },
 
     showError: function(msg) {
-        const box = document.getElementById('error-box');
-        box.style.display = 'block';
-        box.innerText = msg;
-        console.error(msg);
+        document.getElementById('error-box').style.display = 'block';
+        document.getElementById('error-box').innerText = msg;
     },
 
     render: function(ctxObj, isRight) {
         const { gl, prog, canvas } = ctxObj;
         
-        // Resize Handling
         const dpr = window.devicePixelRatio || 1;
         const dispW = Math.floor(canvas.clientWidth * dpr);
         const dispH = Math.floor(canvas.clientHeight * dpr);
 
         if (canvas.width !== dispW || canvas.height !== dispH) {
-            canvas.width = dispW;
-            canvas.height = dispH;
+            canvas.width = dispW; canvas.height = dispH;
             gl.viewport(0, 0, dispW, dispH);
         }
 
-        // Uniform Helpers
         const u = (n, v) => {
             const loc = gl.getUniformLocation(prog, n);
             if(typeof v === 'number') gl.uniform1f(loc, v);
@@ -381,29 +381,28 @@ const app = {
         };
         const ui = (n, v) => gl.uniform1i(gl.getUniformLocation(prog, n), v);
 
-        // Pass State
         u('u_res', [canvas.width, canvas.height]);
         u('u_c', [this.state.c.x, this.state.c.y]);
         u('u_iter', this.state.params.iter);
-        u('u_color', this.state.params.color);
+        u('u_lim_r', this.state.params.r_lim);
+        u('u_lim_g', this.state.params.g_lim);
+        u('u_lim_b', this.state.params.b_lim);
         u('u_glow', this.state.params.glow);
         u('u_grid', this.state.params.grid);
 
-        // View logic
         const cam = isRight ? this.state.right : this.state.left;
         u('u_offset', [cam.offset.x, cam.offset.y]);
         u('u_zoom', cam.zoom);
 
-        // Mode Logic
-        // Mode 0: M / J
-        // Mode 1: M / J (Nebula)
-        // Mode 2: Atlas / J
         let type = 0;
         if (this.state.mode === 0 || this.state.mode === 1) type = isRight ? 1 : 0;
         if (this.state.mode === 2) type = isRight ? 1 : 2; 
 
         ui('u_type', type);
         ui('u_style', this.state.mode === 1 ? 1 : 0);
+        
+        // Show Dot on Left screen (Mandelbrot) only, and NOT in Atlas mode
+        ui('u_show_dot', (!isRight && this.state.mode !== 2) ? 1 : 0);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
@@ -414,13 +413,16 @@ const app = {
         requestAnimationFrame(() => this.loop());
     },
 
-    // --- INTERACTION ---
     setMode: function(m) {
         this.state.mode = m;
         document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === m));
         const labels = [['Mandelbrot', 'Julia Set'], ['Nebula Mandel', 'Nebula Julia'], ['Julia Atlas', 'Julia Inspector']];
         document.getElementById('label-left').innerText = labels[m][0];
         document.getElementById('label-right').innerText = labels[m][1];
+        
+        // Show/Hide Grid Control based on mode
+        // Note: RGB controls are always shown in this version for simplicity, 
+        // but visually they only affect Nebula mode.
     },
 
     resetViews: function() {
@@ -429,27 +431,27 @@ const app = {
     },
 
     saveImage: function() {
-        // Save the Right canvas
+        // Save the Right canvas (The Result)
         const link = document.createElement('a');
-        link.download = `fractal_${Date.now()}.png`;
-        link.href = this.contexts[1].canvas.toDataURL();
+        link.download = `fractal_view_${Date.now()}.png`;
+        link.href = this.contexts[1].canvas.toDataURL('image/png');
         link.click();
     },
 
     attachEvents: function() {
-        const updateVal = (id, key) => {
+        const bind = (id, key) => {
             const el = document.getElementById(id);
-            el.oninput = e => {
+            if(el) el.oninput = e => {
                 this.state.params[key] = parseFloat(e.target.value);
                 const disp = document.getElementById(id.replace('sl', 'val'));
                 if(disp) disp.innerText = e.target.value;
             };
         };
-        updateVal('sl-iter', 'iter');
-        updateVal('sl-zoom', 'zoom_speed'); // Dummy
-        updateVal('sl-grid', 'grid');
-        updateVal('sl-color', 'color');
-        updateVal('sl-glow', 'glow');
+        bind('sl-iter', 'iter');
+        bind('sl-red', 'r_lim');
+        bind('sl-grn', 'g_lim');
+        bind('sl-blu', 'b_lim');
+        bind('sl-glow', 'glow');
 
         // Mouse Handlers
         [this.contexts[0].canvas, this.contexts[1].canvas].forEach((c, idx) => {
@@ -460,19 +462,15 @@ const app = {
                 this.state.activeCanvas = isRight ? 'right' : 'left';
                 this.state.lastMouse = { x: e.clientX, y: e.clientY };
                 
-                // Set C on Left Click
                 if (!isRight && this.state.mode !== 2) {
                     const rect = c.getBoundingClientRect();
                     const cam = this.state.left;
-                    // Fix aspect ratio calculation for correct clicking
+                    // Aspect correction for clicking matches Shader logic
                     const aspect = c.width / c.height; 
                     const normX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
                     const normY = -((e.clientY - rect.top) / rect.height - 0.5) * 2;
                     
-                    // Aspect ratio correction is key here
-                    // In shader: uv = (coord - 0.5*res) / res.y
-                    // So X is multiplied by aspect ratio implicitly in shader coordinates
-                    const cx = (normX * (rect.width/rect.height)) / cam.zoom + cam.offset.x;
+                    const cx = (normX * aspect) / cam.zoom + cam.offset.x;
                     const cy = (normY) / cam.zoom + cam.offset.y;
                     
                     this.state.c = { x: cx, y: cy };
@@ -487,9 +485,8 @@ const app = {
                     const dy = e.clientY - this.state.lastMouse.y;
                     this.state.lastMouse = { x: e.clientX, y: e.clientY };
                     
-                    // Pan Speed
                     const factor = 1.0 / (c.clientHeight * cam.zoom); 
-                    cam.offset.x -= dx * factor * 2.0; // 2.0 to match aspect correction roughly
+                    cam.offset.x -= dx * factor * 2.0; 
                     cam.offset.y += dy * factor * 2.0;
                 }
             });
@@ -502,12 +499,10 @@ const app = {
                 else cam.zoom /= (1 + spd);
             });
         });
-        
         window.addEventListener('mouseup', () => this.state.dragging = false);
     }
 };
 
-// Start
 window.onload = () => app.init();
 </script>
 </body>
