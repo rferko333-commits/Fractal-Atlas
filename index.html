@@ -3,79 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Atlas - Architect</title>
+    <title>Fractal Atlas - Infinity</title>
     <style>
-        :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; }
-        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, Roboto, monospace; }
+        :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: monospace; user-select: none; }
 
+        /* LAYOUT */
+        #app-root { display: flex; flex-direction: column; height: 100vh; }
+        
         /* HEADER */
-        header { height: 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; border-bottom: 1px solid #333; background: #080808; }
-        #back-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 10px; }
+        header { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: #080808; border-bottom: 1px solid #333; }
+        #back-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
         .mode-tabs { display: flex; gap: 5px; }
-        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; }
+        .tab-btn { background: #222; border: 1px solid #444; color: #888; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 11px; }
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
         /* VIEWPORT */
-        #viewport { display: flex; height: calc(100vh - 200px); width: 100%; }
+        #viewport { flex: 1; display: flex; position: relative; }
         .canvas-container { flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden; }
         canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
-        .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; color: #fff; border-radius: 4px; font-size: 12px; pointer-events: none; }
+        .view-label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none; }
+
+        /* OVERLAYS */
+        #bottom-bar { position: absolute; bottom: 170px; left: 10px; pointer-events: none; display: flex; gap: 10px; }
+        .info-tag { background: rgba(0,0,0,0.8); padding: 5px 10px; font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: auto; }
+        #lock-indicator { display: none; color: var(--danger); border-color: var(--danger); font-weight: bold; }
+        
+        #error-log { display: none; position: absolute; top: 50px; left: 50%; transform: translateX(-50%); background: #500; color: white; padding: 15px; border: 2px solid red; font-size: 11px; white-space: pre-wrap; z-index: 999; width: 80%; }
 
         /* CONTROLS */
-        #controls { height: 155px; background: #080808; border-top: 1px solid #333; padding: 10px; overflow-y: auto; }
-        .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; align-items: start; }
-        .control-group { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
+        #controls { height: 160px; background: #080808; border-top: 1px solid #333; padding: 10px; overflow-y: auto; }
+        .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; align-items: start; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 10px; color: #aaa; text-transform: uppercase; font-weight: bold; }
         
-        /* Inputs */
-        input[type="range"] { width: 100%; cursor: pointer; height: 6px; background: #333; appearance: none; border-radius: 3px; }
-        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; border: 1px solid #fff; }
-        select, input[type="text"] { background: #222; color: #eee; border: 1px solid #444; padding: 6px; border-radius: 4px; font-size: 11px; width: 100%; box-sizing: border-box; }
+        input[type="range"] { width: 100%; height: 6px; background: #333; appearance: none; border-radius: 3px; cursor: pointer; }
+        input[type="range"]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
+        
+        select, input[type="text"] { background: #222; color: #eee; border: 1px solid #444; padding: 5px; border-radius: 3px; font-size: 11px; width: 100%; font-family: monospace; }
         
         .val-disp { font-size: 10px; color: var(--accent); float: right; }
         .lbl-r { color: #ff6b6b; } .lbl-g { color: #51cf66; } .lbl-b { color: #339af0; }
         .hidden { display: none !important; }
 
-        /* Buttons */
-        .action-btn { background: #333; color: white; border: 1px solid #555; padding: 6px 15px; cursor: pointer; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .action-btn { background: #333; color: white; border: 1px solid #555; padding: 6px 12px; cursor: pointer; border-radius: 3px; font-size: 11px; font-weight: bold; }
         .action-btn:hover { background: #555; }
-        .btn-lock { background: #222; border: 1px solid #444; color: #666; width: 20px; height: 20px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-left: 10px; }
-        .btn-lock.locked { background: var(--danger); color: white; border-color: var(--danger); }
-
-        /* Bottom Bar */
-        #bottom-bar { position: absolute; bottom: 170px; left: 10px; display: flex; align-items: center; pointer-events: none; }
-        #c-coords { background: rgba(0,0,0,0.8); padding: 5px 10px; font-family: monospace; font-size: 12px; border: 1px solid #444; border-radius: 4px; pointer-events: auto;}
 
         /* SAVE MODAL */
-        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; align-items: center; justify-content: center; }
-        .modal-card { background: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #444; width: 300px; }
-        .modal-title { margin-top: 0; color: white; }
+        #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-box { background: #151515; border: 1px solid #444; padding: 20px; width: 300px; border-radius: 6px; }
         .modal-row { margin-bottom: 15px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
-
-        #eq-error { color: var(--danger); font-size: 10px; margin-top: 2px; display: none; }
     </style>
 </head>
 <body>
 
-<header>
-    <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
-    <div class="mode-tabs">
-        <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
-        <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
-        <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
+<div id="app-root">
+    <header>
+        <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
+        <div class="mode-tabs">
+            <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
+            <button class="tab-btn" onclick="app.setMode(1)">NEBULAE</button>
+            <button class="tab-btn" onclick="app.setMode(2)">ATLAS</button>
+        </div>
+        <div style="flex:1"></div>
+        <button class="action-btn" onclick="ui.toggleModal(true)">SAVE VIEW</button>
+    </header>
+
+    <div id="error-log"></div>
+
+    <div id="viewport">
+        <div class="canvas-container">
+            <div class="view-label" id="lbl-left">Mandelbrot</div>
+            <canvas id="cvs-left"></canvas>
+        </div>
+        <div class="canvas-container">
+            <div class="view-label" id="lbl-right">Julia</div>
+            <canvas id="cvs-right"></canvas>
+        </div>
     </div>
-    <div style="flex:1"></div>
-    <button class="action-btn" onclick="ui.toggleSaveModal(true)">SAVE VIEW</button>
-</header>
+
+    <div id="bottom-bar">
+        <div class="info-tag" id="c-coords">C: -0.7600, 0.1200</div>
+        <div class="info-tag" id="lock-indicator">LOCKED</div>
+    </div>
+
+    <div id="controls">
+        <div class="ctrl-grid">
+            
+            <!-- Equation Engine -->
+            <div class="control-group" style="grid-column: span 2;">
+                <label>Fractal Equation Library</label>
+                <div style="display:flex; gap: 5px;">
+                    <select id="sel-preset" style="width: 120px;" onchange="app.loadPreset()">
+                        <option value="csqr(z)+c">Mandelbrot (z^2)</option>
+                        <option value="cpow(z,3.0)+c">Cubic (z^3)</option>
+                        <option value="cpow(z,4.0)+c">Quartic (z^4)</option>
+                        <option value="cpow(z,5.0)+c">Quintic (z^5)</option>
+                        <option value="vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y),2.0*z.x*z.y)+c">Burning Ship</option>
+                        <option value="csqr(vec2(z.x,-z.y))+c">Tricorn</option>
+                        <option value="csin(z)+c">Sine (sin(z))</option>
+                    </select>
+                    <input type="text" id="inp-eq" value="csqr(z)+c">
+                    <button class="action-btn" onclick="app.compile()">UPDATE</button>
+                </div>
+            </div>
+
+            <!-- Iterations (Max 10k) -->
+            <div class="control-group">
+                <label>Max Iterations <span id="val-iter" class="val-disp">300</span></label>
+                <input type="range" id="sl-iter" min="50" max="10000" value="300">
+            </div>
+
+            <!-- Zoom -->
+            <div class="control-group">
+                <label>Zoom Speed</label>
+                <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <!-- Nebula Only -->
+            <div class="control-group hidden" id="grp-neb-r">
+                <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
+                <input type="range" id="sl-red" min="0" max="1000" value="200">
+            </div>
+            <div class="control-group hidden" id="grp-neb-g">
+                <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
+                <input type="range" id="sl-grn" min="0" max="1000" value="100">
+            </div>
+            <div class="control-group hidden" id="grp-neb-b">
+                <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
+                <input type="range" id="sl-blu" min="0" max="1000" value="50">
+            </div>
+            <div class="control-group hidden" id="grp-neb-den">
+                <label>Nebula Brightness</label>
+                <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
+            </div>
+
+            <!-- Standard Only -->
+            <div class="control-group" id="grp-pal">
+                <label>Palette</label>
+                <select id="sel-pal" onchange="app.updateParams()">
+                    <option value="0">Magma</option>
+                    <option value="1">Viridis</option>
+                    <option value="2">Ice</option>
+                    <option value="3">Electric</option>
+                </select>
+            </div>
+
+            <!-- Atlas Only (Grid 500) -->
+            <div class="control-group hidden" id="grp-grid">
+                <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
+                <input type="range" id="sl-grid" min="2" max="500" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>&nbsp;</label>
+                <button class="action-btn" style="width:100%" onclick="app.resetPos()">RESET POSITION</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- SAVE MODAL -->
 <div id="save-modal">
-    <div class="modal-card">
-        <h3 class="modal-title">Save Image</h3>
+    <div class="modal-box">
+        <h3 style="margin-top:0; color:white;">Save High-Res Image</h3>
         <div class="modal-row">
-            <label>Select Window</label>
-            <select id="save-target">
+            <label>Select View</label>
+            <select id="save-view">
                 <option value="left">Left Window</option>
                 <option value="right" selected>Right Window</option>
             </select>
@@ -83,242 +177,159 @@
         <div class="modal-row">
             <label>Resolution</label>
             <select id="save-res">
-                <option value="1">Screen Size (Fast)</option>
+                <option value="1">Screen (Preview)</option>
                 <option value="2">HD (1920x1080)</option>
                 <option value="4">4K (3840x2160)</option>
                 <option value="8">8K (7680x4320)</option>
             </select>
         </div>
-        <div class="modal-actions">
-            <button class="action-btn" onclick="ui.toggleSaveModal(false)">Cancel</button>
-            <button class="action-btn" style="background:var(--accent); color:#000" onclick="app.doSave()">Render & Save</button>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
+            <button class="action-btn" style="background:var(--accent); color:black;" onclick="app.save()">Render</button>
         </div>
-    </div>
-</div>
-
-<div id="viewport">
-    <div class="canvas-container">
-        <div class="view-label" id="label-left">Mandelbrot</div>
-        <canvas id="canvas-left"></canvas>
-    </div>
-    <div class="canvas-container">
-        <div class="view-label" id="label-right">Julia</div>
-        <canvas id="canvas-right"></canvas>
-    </div>
-</div>
-
-<div id="bottom-bar">
-    <div id="c-coords">C: -0.7600, 0.1200</div>
-    <button id="btn-lock" class="btn-lock" onclick="app.toggleLock()" title="Lock Julia Seed">🔒</button>
-</div>
-
-<div id="controls">
-    <div class="ctrl-grid">
-        
-        <!-- Equation -->
-        <div class="control-group" style="grid-column: span 2">
-            <label>Fractal Equation (GLSL)</label>
-            <div style="display:flex; gap:5px">
-                <input type="text" id="inp-eq" value="cpow(z, 2.0) + c" placeholder="e.g. cpow(z, 2.0) + c">
-                <button class="action-btn" onclick="app.compile()">APPLY</button>
-            </div>
-            <div id="eq-error">Error parsing equation</div>
-        </div>
-
-        <!-- Universal -->
-        <div class="control-group">
-            <label>Iterations <span id="val-iter" class="val-disp">300</span></label>
-            <input type="range" id="sl-iter" min="50" max="1000" value="300">
-        </div>
-
-        <div class="control-group">
-            <label>Zoom Speed</label>
-            <input type="range" id="sl-zoom" min="0.1" max="3.0" step="0.1" value="1.0">
-        </div>
-
-        <!-- Nebula RGB (Only Visible in Nebula Mode) -->
-        <div class="control-group hidden" id="grp-neb-r">
-            <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
-            <input type="range" id="sl-red" min="0" max="500" value="200">
-        </div>
-        <div class="control-group hidden" id="grp-neb-g">
-            <label class="lbl-g">Green Threshold <span id="val-grn" class="val-disp">100</span></label>
-            <input type="range" id="sl-grn" min="0" max="500" value="100">
-        </div>
-        <div class="control-group hidden" id="grp-neb-b">
-            <label class="lbl-b">Blue Threshold <span id="val-blu" class="val-disp">50</span></label>
-            <input type="range" id="sl-blu" min="0" max="500" value="50">
-        </div>
-
-        <!-- Appearance -->
-        <div class="control-group hidden" id="grp-neb-den">
-            <label>Nebula Density (Exp)</label>
-            <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
-        </div>
-
-        <div class="control-group" id="grp-palette">
-            <label>Color Palette</label>
-            <select id="sl-palette" onchange="app.updateParams()">
-                <option value="0">Magma</option>
-                <option value="1">Viridis</option>
-                <option value="2">Ice</option>
-                <option value="3">Psychedelic</option>
-            </select>
-        </div>
-
-        <!-- Atlas Grid (Only Visible in Atlas Mode) -->
-        <div class="control-group hidden" id="grp-grid">
-            <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
-            <input type="range" id="sl-grid" min="2" max="100" step="1" value="10">
-        </div>
-        
-        <div class="control-group">
-            <label>&nbsp;</label>
-            <button class="action-btn" style="width:100%" onclick="app.resetViews()">RESET POSITION</button>
-        </div>
-
     </div>
 </div>
 
 <script>
-// --- SHADER TEMPLATE ---
-const VS_SOURCE = `attribute vec2 a_position; void main() { gl_Position = vec4(a_position, 0.0, 1.0); }`;
-
-const FS_TEMPLATE = `
+// --- GLSL MATH LIBRARY (Inserted before main) ---
+const MATH_LIB = `
     precision highp float;
-
-    uniform vec2 u_res;
-    uniform vec2 u_offset;
-    uniform float u_zoom;
-    uniform vec2 u_c_select;
-
-    uniform int u_mode;      // 0=Frac, 1=Neb, 2=Atlas
-    uniform int u_is_right;  // 0=Left, 1=Right
+    // Standard Math Helpers
+    #define PI 3.14159265
     
-    uniform float u_iter;
-    uniform float u_grid;
-    uniform float u_density;  
-    uniform int u_palette;
-    uniform float u_lim_r;
-    uniform float u_lim_g;
-    uniform float u_lim_b;
-
-    // Complex Math
-    vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
+    vec2 cadd(vec2 a, vec2 b) { return a + b; }
+    vec2 csub(vec2 a, vec2 b) { return a - b; }
     vec2 cmul(vec2 a, vec2 b) { return vec2(a.x*b.x - a.y*b.y, a.x*b.y + a.y*b.x); }
-    vec2 csin(vec2 z) { return vec2(sin(z.x)*cosh(z.y), cos(z.x)*sinh(z.y)); }
+    vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
+    
     vec2 cpow(vec2 z, float n) {
         float r = length(z);
-        if(r==0.0) return vec2(0.0);
+        if(r < 0.0001) return vec2(0.0);
         float a = atan(z.y, z.x);
         return pow(r, n) * vec2(cos(a*n), sin(a*n));
     }
-
-    vec3 get_color(float t) {
-        vec3 a, b, c, d;
-        if (u_palette == 0) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.3,0.2,0.2); } 
-        else if (u_palette == 1) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.0,0.33,0.67); } 
-        else if (u_palette == 2) { a=vec3(0.5); b=vec3(0.5); c=vec3(0.8); d=vec3(0.15,0.2,0.3); } 
-        else { a=vec3(0.5); b=vec3(0.5); c=vec3(2.0); d=vec3(0.5,0.2,0.25); } 
+    
+    vec2 csin(vec2 z) {
+        return vec2(sin(z.x) * cosh(z.y), cos(z.x) * sinh(z.y));
+    }
+    
+    // Palette
+    vec3 palette(float t, int id) {
+        vec3 a,b,c,d;
+        if(id==0) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.3,0.2,0.2); }
+        else if(id==1) { a=vec3(0.5); b=vec3(0.5); c=vec3(1.0); d=vec3(0.0,0.33,0.67); }
+        else if(id==2) { a=vec3(0.5); b=vec3(0.5); c=vec3(0.8); d=vec3(0.15,0.2,0.3); }
+        else { a=vec3(0.5); b=vec3(0.5); c=vec3(2.0); d=vec3(0.5,0.2,0.25); }
         return a + b * cos(6.28318 * (c * t + d));
     }
+`;
+
+const FRAG_SOURCE = `
+    uniform vec2 u_res;
+    uniform vec2 u_offset;
+    uniform float u_zoom;
+    uniform vec2 u_c;
+    
+    uniform int u_mode;     // 0=Frac, 1=Neb, 2=Atlas
+    uniform int u_view;     // 0=Left, 1=Right
+    
+    uniform float u_iter;
+    uniform float u_grid;
+    uniform int u_pal;
+    
+    // Nebula Params
+    uniform float u_den;
+    uniform float u_lr;
+    uniform float u_lg;
+    uniform float u_lb;
 
     void main() {
         vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
         vec2 z, c;
         
-        // --- LOGIC TREE ---
-        // Mode 0: L=Mandel(Std), R=Julia(Std)
-        // Mode 1: L=Mandel(Neb), R=Julia(Neb)
-        // Mode 2: L=JuliaAtlas(Std), R=JuliaAtlas(Neb)
+        bool isAtlas = (u_mode == 2);
         
-        bool is_atlas = (u_mode == 2);
-        
-        if (is_atlas) {
-            // BOTH sides are atlases in Mode 2
+        if(isAtlas) {
+            // Atlas Grid Logic
             vec2 guv = uv * u_grid;
             vec2 cell = floor(guv);
             vec2 tile = fract(guv) - 0.5;
-            float range = 4.0 / u_zoom;
-            vec2 c_map = u_offset + (cell / u_grid) * range;
-            
-            z = tile * 3.0; // Fixed tile zoom
-            c = c_map;
+            float rng = 4.0 / u_zoom;
+            vec2 cmap = u_offset + (cell / u_grid) * rng;
+            z = tile * 3.0; 
+            c = cmap;
         } else {
-            // Standard View
+            // Standard Logic
             vec2 p = uv / u_zoom + u_offset;
-            // Left is Mandel/Buddha (Map), Right is Julia (Loc)
-            if (u_is_right == 1) { z = p; c = u_c_select; } 
+            // Left is Map, Right is Julia
+            if(u_view == 1) { z = p; c = u_c; }
             else { z = vec2(0.0); c = p; }
         }
 
-        // --- CALCULATION ---
+        // --- LOOP ---
         float iter = 0.0;
-        float min_dist = 100.0;
-        float z_mag = 0.0;
+        float d = 100.0; // Min Dist
+        float m = 0.0;   // Magnitude
         
-        // DYNAMIC LOOP
-        for (int i = 0; i < 1000; i++) {
-            if (float(i) > u_iter) break;
+        // Accumulators for Nebula
+        float acc_r = 0.0;
+        float acc_g = 0.0;
+        float acc_b = 0.0;
+        
+        // NOTE: We use a fixed loop size for shader compatibility. 
+        // Logic breaks early based on u_iter
+        for(int i=0; i<10000; i++) {
+            if(float(i) > u_iter) break;
             
-            // --- INJECTED EQUATION ---
-            z = {{EQUATION}};
-            // -------------------------
+            // --- INJECTED EQ ---
+            z = {{EQ}};
+            // ------------------
+            
+            m = dot(z,z);
+            if(m > 100.0) break;
+            
+            d = min(d, length(z)); // Trap
+            
+            // Nebula Stacking
+            // We add light to channels if iteration count passes threshold
+            // This creates the "layered" Buddhabrot look
+            float glow = exp(-length(z) * 1.5); 
+            if(float(i) > u_lr) acc_r += glow;
+            if(float(i) > u_lg) acc_g += glow;
+            if(float(i) > u_lb) acc_b += glow;
 
-            z_mag = dot(z,z);
-            if (z_mag > 100.0) break;
-            min_dist = min(min_dist, length(z)); // Orbit Trap
             iter += 1.0;
         }
 
-        // --- COLORING ---
         vec3 col = vec3(0.0);
-        
-        // Nebula Style if: Mode is 1 OR (Mode is 2 AND Right Screen)
-        bool is_nebula = (u_mode == 1) || (u_mode == 2 && u_is_right == 1);
+        bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1);
 
-        if (is_nebula) {
-            // IMPROVED NEBULA MATH (Soft Trap + Gamma)
-            float d = min_dist;
-            // Logarithmic potential for gaseous look
-            float glow = 0.5 * exp(-d * (0.5 + u_density)); 
-            
-            // Stacking channels based on iteration thresholds
-            vec3 stack = vec3(0.0);
-            
-            // Smooth transitions
-            float ir = smoothstep(u_lim_r, u_lim_r+20.0, iter);
-            float ig = smoothstep(u_lim_g, u_lim_g+20.0, iter);
-            float ib = smoothstep(u_lim_b, u_lim_b+20.0, iter);
-            
-            stack.r = glow * ir;
-            stack.g = glow * ig;
-            stack.b = glow * ib;
-            
-            // Boost brightness
-            col = stack * (u_density * 4.0);
-            
+        if(isNeb) {
+            // Nebula Coloring
+            // Normalize accumulators
+            col = vec3(acc_r, acc_g, acc_b) * 0.01 * u_den;
+            col = pow(col, vec3(0.8)); // Gamma correction
         } else {
-            // Standard Fractal
-            if (z_mag < 100.0) col = vec3(0.0);
+            // Standard Coloring
+            if(m < 100.0) col = vec3(0.0);
             else {
-                float sn = iter - log2(log2(dot(z,z))) + 4.0;
-                col = get_color(sn * 0.02);
+                float sn = iter - log2(log2(m)) + 4.0;
+                col = palette(sn * 0.02, u_pal);
             }
         }
 
-        // --- OVERLAYS ---
-        if (is_atlas) {
-            vec2 guv = abs(fract(gl_FragCoord.xy / u_res.y * u_grid) - 0.5);
-            if (guv.x > 0.48 || guv.y > 0.48) col *= 0.5;
+        // Grid Overlay
+        if(isAtlas) {
+            vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
+            if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
         }
-
-        // Selection Dot (Only on Left Screen, NOT in Atlas)
-        if (u_is_right == 0 && u_mode != 2) {
-            float d = distance(c, u_c_select);
-            float sz = 0.015 / u_zoom; 
-            if (d < sz) col = vec3(1.0);
-            else if (d < sz*1.3) col = vec3(0.0);
+        
+        // Dot Overlay (Left Screen Only, Not Atlas)
+        if(u_view == 0 && u_mode != 2) {
+             float dist = distance(c, u_c);
+             float sz = 0.015 / u_zoom;
+             if(dist < sz) col = vec3(1.0);
+             else if(dist < sz*1.4) col = vec3(0.0);
         }
 
         gl_FragColor = vec4(col, 1.0);
@@ -328,266 +339,249 @@ const FS_TEMPLATE = `
 const app = {
     state: {
         mode: 0, locked: false,
-        c: { x: -0.76, y: 0.12 },
-        left: { offset: {x: -0.5, y: 0.0}, zoom: 1.0 },
-        right: { offset: {x: 0.0, y: 0.0}, zoom: 1.0 },
-        params: { iter: 300, grid: 10, palette: 0, density: 1.5, r_lim: 200, g_lim: 100, b_lim: 50 },
-        dragging: false, activeCanvas: null, lastMouse: {x:0,y:0}
+        c: {x: -0.76, y: 0.12},
+        left: {x: -0.5, y: 0.0, z: 1.0},
+        right: {x: 0.0, y: 0.0, z: 1.0},
+        p: { iter: 300, grid: 10, pal: 0, den: 1.5, r: 200, g: 100, b: 50 },
+        drag: false, active: null, last: {x:0, y:0}
     },
-    
-    contexts: [],
+    ctx: [],
 
     init: function() {
-        this.contexts = [ this.createContext('canvas-left'), this.createContext('canvas-right') ];
-        if (this.contexts[0] && this.contexts[1]) {
-            this.compile(); // First compile with default equation
-            ui.attachEvents();
-            this.loop();
-        }
+        this.ctx = [this.mkCtx('cvs-left'), this.mkCtx('cvs-right')];
+        if(!this.ctx[0].gl) return;
+        ui.init();
+        this.compile();
+        this.loop();
     },
 
-    createContext: function(id) {
-        const canvas = document.getElementById(id);
-        const gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
-        return { gl, canvas, prog: null };
+    mkCtx: function(id) {
+        const cvs = document.getElementById(id);
+        const gl = cvs.getContext('webgl', {preserveDrawingBuffer:true});
+        return { gl, cvs, prog:null };
+    },
+
+    loadPreset: function() {
+        document.getElementById('inp-eq').value = document.getElementById('sel-preset').value;
+        this.compile();
     },
 
     compile: function() {
-        const eqInput = document.getElementById('inp-eq').value;
-        const fsSource = FS_TEMPLATE.replace('{{EQUATION}}', eqInput);
+        const eq = document.getElementById('inp-eq').value;
+        const fs = MATH_LIB + FRAG_SOURCE.replace('{{EQ}}', eq);
+        const vs = "attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}";
         
-        let success = true;
-        this.contexts.forEach(ctx => {
-            const prog = this.createProgram(ctx.gl, VS_SOURCE, fsSource);
-            if (prog) {
-                ctx.prog = prog;
-                document.getElementById('eq-error').style.display = 'none';
-            } else {
-                success = false;
-                document.getElementById('eq-error').style.display = 'block';
-            }
+        let err = null;
+        this.ctx.forEach(c => {
+            const p = this.mkProg(c.gl, vs, fs);
+            if(p) { c.prog = p; } else { err = "Shader Error"; }
         });
-        if(success) this.renderAll();
+
+        const log = document.getElementById('error-log');
+        if(err) {
+            log.style.display = 'block';
+            log.innerText = "Error parsing equation. Check syntax (e.g. use 2.0 instead of 2).";
+        } else {
+            log.style.display = 'none';
+        }
     },
 
-    createProgram: function(gl, vsSrc, fsSrc) {
-        const compile = (src, type) => {
-            const sh = gl.createShader(type);
-            gl.shaderSource(sh, src);
-            gl.compileShader(sh);
-            if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) return null;
-            return sh;
+    mkProg: function(gl, vsS, fsS) {
+        const s = (t, src) => {
+            const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o);
+            if(!gl.getShaderParameter(o, gl.COMPILE_STATUS)) { console.error(gl.getShaderInfoLog(o)); return null; }
+            return o;
         };
-        const vs = compile(vsSrc, gl.VERTEX_SHADER);
-        const fs = compile(fsSrc, gl.FRAGMENT_SHADER);
-        if(!vs || !fs) return null;
+        const p = gl.createProgram();
+        const v = s(gl.VERTEX_SHADER, vsS);
+        const f = s(gl.FRAGMENT_SHADER, fsS);
+        if(!v || !f) return null;
         
-        const prog = gl.createProgram();
-        gl.attachShader(prog, vs); gl.attachShader(prog, fs);
-        gl.linkProgram(prog);
-        if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+        gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
+        if(!gl.getProgramParameter(p, gl.LINK_STATUS)) return null;
         
-        // Setup Buffer
-        const buff = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buff);
+        const b = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, b);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]), gl.STATIC_DRAW);
-        const posLoc = gl.getAttribLocation(prog, 'a_position');
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        
-        return prog;
+        const loc = gl.getAttribLocation(p, 'p');
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        return p;
     },
 
     render: function(ctx, isRight) {
         if(!ctx.prog) return;
-        const { gl, prog, canvas } = ctx;
+        const {gl, cvs, prog} = ctx;
         
-        // Resize check
-        const dpr = window.devicePixelRatio || 1;
-        // If saving, we might use a custom size, but loop uses display size
-        if (!app.isSaving) {
-            const w = Math.floor(canvas.clientWidth * dpr), h = Math.floor(canvas.clientHeight * dpr);
-            if (canvas.width !== w || canvas.height !== h) { canvas.width=w; canvas.height=h; gl.viewport(0,0,w,h); }
+        if(!app.saving) {
+            const dpr = window.devicePixelRatio||1;
+            const w=Math.floor(cvs.clientWidth*dpr), h=Math.floor(cvs.clientHeight*dpr);
+            if(cvs.width!==w || cvs.height!==h) { cvs.width=w; cvs.height=h; gl.viewport(0,0,w,h); }
         }
 
         gl.useProgram(prog);
         const u = (n,v) => { const l=gl.getUniformLocation(prog,n); if(typeof v==='number')gl.uniform1f(l,v); else gl.uniform2f(l,v[0],v[1]); };
         const ui = (n,v) => gl.uniform1i(gl.getUniformLocation(prog,n),v);
 
-        u('u_res', [canvas.width, canvas.height]);
-        u('u_c_select', [this.state.c.x, this.state.c.y]);
-        u('u_iter', this.state.params.iter);
-        u('u_grid', this.state.params.grid);
-        u('u_density', this.state.params.density);
-        u('u_lim_r', this.state.params.r_lim);
-        u('u_lim_g', this.state.params.g_lim);
-        u('u_lim_b', this.state.params.b_lim);
+        const s = this.state;
+        const cam = isRight ? s.right : s.left;
         
-        ui('u_mode', this.state.mode);
-        ui('u_is_right', isRight ? 1 : 0);
-        ui('u_palette', this.state.params.palette);
-
-        const cam = isRight ? this.state.right : this.state.left;
-        u('u_offset', [cam.offset.x, cam.offset.y]);
-        u('u_zoom', cam.zoom);
+        u('u_res', [cvs.width, cvs.height]);
+        u('u_offset', [cam.x, cam.y]);
+        u('u_zoom', cam.z);
+        u('u_c', [s.c.x, s.c.y]);
+        
+        u('u_iter', s.p.iter);
+        u('u_grid', s.p.grid);
+        u('u_den', s.p.den);
+        u('u_lr', s.p.r); u('u_lg', s.p.g); u('u_lb', s.p.b);
+        
+        ui('u_mode', s.mode);
+        ui('u_view', isRight?1:0);
+        ui('u_pal', s.p.pal);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
 
     loop: function() {
-        if (!app.isSaving) {
-            this.render(this.contexts[0], false);
-            this.render(this.contexts[1], true);
+        if(!app.saving) {
+            this.render(this.ctx[0], 0);
+            this.render(this.ctx[1], 1);
         }
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame(()=>this.loop());
     },
     
-    renderAll: function() { /* Triggered by compile */ },
-
     setMode: function(m) {
         this.state.mode = m;
-        document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===m));
+        document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===m));
         
-        let l, r;
-        if(m===0) { l="Mandelbrot"; r="Julia Set"; }
+        let l="Mandelbrot", r="Julia Set";
         if(m===1) { l="Buddhabrot"; r="Nebula Julia"; }
         if(m===2) { l="Julia Atlas"; r="Nebula Atlas"; }
-        
-        document.getElementById('label-left').innerText = l;
-        document.getElementById('label-right').innerText = r;
-        ui.updateControls();
+        document.getElementById('lbl-left').innerText=l;
+        document.getElementById('lbl-right').innerText=r;
+        ui.updControls();
     },
 
-    toggleLock: function() {
-        this.state.locked = !this.state.locked;
-        document.getElementById('btn-lock').classList.toggle('locked', this.state.locked);
+    resetPos: function() {
+        this.state.left = {x:-0.5, y:0, z:1};
+        this.state.right = {x:0, y:0, z:1};
     },
 
-    resetViews: function() {
-        this.state.left = { offset: {x: -0.5, y: 0.0}, zoom: 1.0 };
-        this.state.right = { offset: {x: 0.0, y: 0.0}, zoom: 1.0 };
-    },
+    save: function() {
+        app.saving = true;
+        const view = document.getElementById('save-view').value;
+        const res = parseInt(document.getElementById('save-res').value);
+        const ctx = view==='left' ? this.ctx[0] : this.ctx[1];
+        
+        const ow = ctx.cvs.width, oh = ctx.cvs.height;
+        let w=1920, h=1080;
+        if(res===4) {w=3840; h=2160;}
+        if(res===8) {w=7680; h=4320;}
+        if(res===1) {w=ow; h=oh;}
 
-    doSave: function() {
-        app.isSaving = true; // Pause loop
-        const target = document.getElementById('save-target').value;
-        const resMult = parseInt(document.getElementById('save-res').value);
+        ctx.cvs.width = w; ctx.cvs.height = h; ctx.gl.viewport(0,0,w,h);
+        this.render(ctx, view==='right');
         
-        const ctx = target === 'left' ? this.contexts[0] : this.contexts[1];
-        const oldW = ctx.canvas.width;
-        const oldH = ctx.canvas.height;
+        const a = document.createElement('a');
+        a.download = `fractal_${view}_${Date.now()}.png`;
+        a.href = ctx.cvs.toDataURL();
+        a.click();
         
-        // 1. Resize Canvas Logic
-        let w = 1920, h = 1080;
-        if (resMult === 1) { w = oldW; h = oldH; }
-        else if (resMult === 4) { w = 3840; h = 2160; }
-        else if (resMult === 8) { w = 7680; h = 4320; }
-        
-        ctx.canvas.width = w;
-        ctx.canvas.height = h;
-        ctx.gl.viewport(0, 0, w, h);
-        
-        // 2. Render
-        this.render(ctx, target === 'right');
-        
-        // 3. Download
-        const link = document.createElement('a');
-        link.download = `fractal_${target}_${w}x${h}.png`;
-        link.href = ctx.canvas.toDataURL('image/png');
-        link.click();
-        
-        // 4. Restore
-        ctx.canvas.width = oldW;
-        ctx.canvas.height = oldH;
-        ctx.gl.viewport(0, 0, oldW, oldH);
-        
-        ui.toggleSaveModal(false);
-        app.isSaving = false;
+        ctx.cvs.width = ow; ctx.cvs.height = oh; ctx.gl.viewport(0,0,ow,oh);
+        app.saving = false;
+        ui.toggleModal(false);
     }
 };
 
 const ui = {
-    updateControls: function() {
-        const show = (id, cond) => document.getElementById(id).classList.toggle('hidden', !cond);
-        const m = app.state.mode;
-        
-        const isNeb = (m === 1);
-        const isAtlas = (m === 2);
-        
-        show('grp-palette', !isNeb);
-        show('grp-neb-den', isNeb || isAtlas); // Nebulas appear in Atlas right side
-        show('grp-neb-r', isNeb || isAtlas);
-        show('grp-neb-g', isNeb || isAtlas);
-        show('grp-neb-b', isNeb || isAtlas);
-        show('grp-grid', isAtlas);
-    },
-    
-    toggleSaveModal: function(show) {
-        document.getElementById('save-modal').style.display = show ? 'flex' : 'none';
-    },
-
-    attachEvents: function() {
-        const update = () => {
-            const p = app.state.params;
+    init: function() {
+        const ids = ['iter','grid','red','grn','blu','den'];
+        const upd = () => {
             const v = id => parseFloat(document.getElementById(id).value);
-            p.iter = v('sl-iter'); p.grid = v('sl-grid'); p.density = v('sl-den');
-            p.r_lim = v('sl-red'); p.g_lim = v('sl-grn'); p.b_lim = v('sl-blu');
-            p.palette = parseInt(document.getElementById('sl-palette').value);
+            const p = app.state.p;
+            p.iter=v('sl-iter'); p.grid=v('sl-grid'); p.r=v('sl-red'); p.g=v('sl-grn'); p.b=v('sl-blu'); p.den=v('sl-den');
+            p.pal = parseInt(document.getElementById('sel-pal').value);
             
-            ['iter','grid','red','grn','blu'].forEach(k => document.getElementById(`val-${k}`).innerText = v(`sl-${k}`));
+            ids.forEach(k => {
+                 const el = document.getElementById(`val-${k}`);
+                 if(el) el.innerText = v(`sl-${k}`);
+            });
         };
-
-        document.querySelectorAll('input[type=range], select').forEach(el => el.oninput = update);
+        document.querySelectorAll('input, select').forEach(e => e.oninput = upd);
         
-        // Mouse Logic
-        [app.contexts[0].canvas, app.contexts[1].canvas].forEach((c, idx) => {
-            const isRight = idx === 1;
-            c.addEventListener('mousedown', e => {
-                app.state.dragging = true;
-                app.state.activeCanvas = isRight ? 'right' : 'left';
-                app.state.lastMouse = { x: e.clientX, y: e.clientY };
+        // Mouse / Lock Logic
+        app.ctx.forEach((c, idx) => {
+            const isR = idx===1;
+            const cv = c.cvs;
+            
+            cv.addEventListener('dblclick', () => {
+               app.state.locked = !app.state.locked;
+               const ind = document.getElementById('lock-indicator');
+               ind.style.display = app.state.locked ? 'block' : 'none';
+            });
 
-                // Picking C (Only on Left Screen, NOT in Atlas)
-                if (!isRight && app.state.mode !== 2 && !app.state.locked) {
-                    const r = c.getBoundingClientRect();
+            cv.addEventListener('mousedown', e => {
+                app.state.drag = true;
+                app.state.active = isR ? 'r' : 'l';
+                app.state.last = {x:e.clientX, y:e.clientY};
+                
+                if(!isR && app.state.mode!==2 && !app.state.locked) {
+                    const r = cv.getBoundingClientRect();
                     const cam = app.state.left;
-                    const aspect = c.width/c.height;
-                    const nx = ((e.clientX - r.left) / r.width - 0.5) * aspect; 
-                    const ny = -((e.clientY - r.top) / r.height - 0.5); 
+                    const asp = cv.width/cv.height;
+                    const nx = ((e.clientX-r.left)/r.width - 0.5) * aspect;
+                    const ny = -((e.clientY-r.top)/r.height - 0.5); // DOM Y inverted
                     
-                    const cx = nx / cam.zoom + cam.offset.x;
-                    const cy = ny / cam.zoom + cam.offset.y;
+                    // Correct aspect ratio math for selection
+                    // Shader does: (xy - 0.5*res)/res.y -> x is scaled by aspect
+                    // Shader does: uv/zoom + offset
+                    // So we must match that exactly.
+                    const aspectShader = cv.width/cv.height;
+                    const uvX = ((e.clientX - r.left) / r.height) - (aspectShader*0.5);
+                    const uvY = -(((e.clientY - r.top) / r.height) - 0.5);
                     
-                    app.state.c = { x: cx, y: cy };
-                    document.getElementById('c-coords').innerText = `C: ${cx.toFixed(4)}, ${cy.toFixed(4)}`;
+                    app.state.c.x = uvX / cam.z + cam.x;
+                    app.state.c.y = uvY / cam.z + cam.y;
+                    
+                    document.getElementById('c-coords').innerText = `C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
                 }
             });
 
-            c.addEventListener('mousemove', e => {
-                if(app.state.dragging && app.state.activeCanvas === (isRight?'right':'left')) {
-                    const cam = isRight ? app.state.right : app.state.left;
-                    const dx = e.clientX - app.state.lastMouse.x;
-                    const dy = e.clientY - app.state.lastMouse.y;
-                    app.state.lastMouse = { x: e.clientX, y: e.clientY };
-                    
-                    const factor = 1.0 / (c.clientHeight * cam.zoom);
-                    cam.offset.x -= dx * factor;
-                    cam.offset.y += dy * factor;
+            cv.addEventListener('mousemove', e => {
+                if(app.state.drag && app.state.active === (isR?'r':'l')) {
+                    const cam = isR ? app.state.right : app.state.left;
+                    const dx = e.clientX - app.state.last.x;
+                    const dy = e.clientY - app.state.last.y;
+                    app.state.last = {x:e.clientX, y:e.clientY};
+                    const fac = 1.0 / (cv.clientHeight * cam.z);
+                    cam.x -= dx * fac; cam.y += dy * fac;
                 }
             });
 
-            c.addEventListener('wheel', e => {
+            cv.addEventListener('wheel', e => {
                 e.preventDefault();
-                const cam = isRight ? app.state.right : app.state.left;
+                const cam = isR ? app.state.right : app.state.left;
                 const spd = parseFloat(document.getElementById('sl-zoom').value) * 0.1;
-                if (e.deltaY < 0) cam.zoom *= (1 + spd); else cam.zoom /= (1 + spd);
+                if(e.deltaY < 0) cam.z *= (1+spd); else cam.z /= (1+spd);
             });
         });
-        window.addEventListener('mouseup', () => app.state.dragging = false);
+        window.addEventListener('mouseup', () => app.state.drag = false);
+    },
+    
+    toggleModal: function(show) { document.getElementById('save-modal').style.display = show?'flex':'none'; },
+    
+    updControls: function() {
+        const m = app.state.mode;
+        const s = (id, show) => document.getElementById(id).classList.toggle('hidden', !show);
+        const isNeb = (m===1);
+        const isAtl = (m===2);
+        
+        s('grp-neb-r', isNeb||isAtl); s('grp-neb-g', isNeb||isAtl); s('grp-neb-b', isNeb||isAtl); s('grp-neb-den', isNeb||isAtl);
+        s('grp-pal', !isNeb);
+        s('grp-grid', isAtl);
     }
 };
-
-window.onload = () => app.init();
 </script>
 </body>
 </html>
