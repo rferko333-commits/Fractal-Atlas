@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Atlas - Infinity</title>
+    <title>Fractal Atlas - Ultimate</title>
     <style>
         :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
         body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; user-select: none; }
@@ -86,7 +86,6 @@
 <div id="controls">
     <div class="ctrl-grid">
         
-        <!-- Human Readable Equation -->
         <div class="control-group" style="grid-column: span 2;">
             <label>Fractal Equation Library</label>
             <div style="display:flex; gap: 5px;">
@@ -110,7 +109,7 @@
         </div>
 
         <div class="control-group">
-            <label>Zoom Speed</label>
+            <label title="WebGL precision limits deep zooming to ~100,000x">Zoom Speed (Scroll)</label>
             <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
         </div>
 
@@ -146,7 +145,7 @@
         <!-- Atlas Only -->
         <div class="control-group hidden" id="grp-grid">
             <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
-            <input type="range" id="sl-grid" min="2" max="500" value="10">
+            <input type="range" id="sl-grid" min="2" max="100" value="10">
         </div>
 
         <div class="control-group">
@@ -187,23 +186,16 @@
 // --- EQUATION TRANSLATOR ---
 function parseEquation(eq) {
     let s = eq.toLowerCase().replace(/\s+/g, '');
-    
     if(s === 'burningship') return 'vec2(z.x*z.x-z.y*z.y, 2.0*abs(z.x*z.y))+c';
     if(s === 'tricorn') return 'vec2(z.x*z.x-z.y*z.y, -2.0*z.x*z.y)+c';
-    
     s = s.replace(/z\^2(?!\.)/g, 'csqr(z)'); 
-    s = s.replace(/z\^([0-9.]+)/g, (match, p1) => {
-        return p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`;
-    });
-    
+    s = s.replace(/z\^([0-9.]+)/g, (match, p1) => { return p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`; });
     s = s.replace(/sin\(z\)/g, 'csin(z)');
     s = s.replace(/cos\(z\)/g, 'ccos(z)');
-    
     return s;
 }
 
 // --- GLSL MATH LIBRARY ---
-// CRITICAL FIX: Replaced unsupported sinh/cosh with manually calculated exp() equations.
 const SHADER_HEAD = `
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -212,27 +204,19 @@ const SHADER_HEAD = `
     #endif
     
     vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
-    
     vec2 cpow(vec2 z, float n) {
         float r = length(z);
         if(r < 0.00001) return vec2(0.0);
         float a = atan(z.y, z.x);
         return pow(r, n) * vec2(cos(a*n), sin(a*n));
     }
-    
-    // Manually built trig functions for WebGL 1.0 compatibility
     vec2 csin(vec2 z) {
         float ey = exp(z.y); float e_y = exp(-z.y);
-        float ch = (ey + e_y) / 2.0;
-        float sh = (ey - e_y) / 2.0;
-        return vec2(sin(z.x) * ch, cos(z.x) * sh);
+        return vec2(sin(z.x) * (ey + e_y)/2.0, cos(z.x) * (ey - e_y)/2.0);
     }
-    
     vec2 ccos(vec2 z) {
         float ey = exp(z.y); float e_y = exp(-z.y);
-        float ch = (ey + e_y) / 2.0;
-        float sh = (ey - e_y) / 2.0;
-        return vec2(cos(z.x) * ch, -sin(z.x) * sh);
+        return vec2(cos(z.x) * (ey + e_y)/2.0, -sin(z.x) * (ey - e_y)/2.0);
     }
     
     vec3 palette(float t, int id) {
@@ -253,7 +237,6 @@ const SHADER_BODY = `
     void main() {
         vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
         vec2 z, c;
-        
         bool isAtlas = (u_mode == 2);
         
         if(isAtlas) {
@@ -272,19 +255,17 @@ const SHADER_BODY = `
 
         float iter = 0.0;
         float m = 0.0;
-        float acc_dens = 0.0;
+        float d_min = 1000.0; // Distance trap for Nebula
         
         const int MAX_LOOP = 10000;
-        
         for(int i=0; i<MAX_LOOP; i++) {
             if(float(i) > u_iter) break;
             
             z = {{EQ}};
             
             m = dot(z,z);
+            if(m < d_min) d_min = m; // Track closest approach
             if(m > 100.0) break;
-            
-            acc_dens += exp(-length(z) * 1.5);
             iter += 1.0;
         }
 
@@ -292,13 +273,19 @@ const SHADER_BODY = `
         bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1); 
 
         if(isNeb) {
-            if(iter > u_lr && iter < u_iter) col.r = acc_dens;
-            if(iter > u_lg && iter < u_iter) col.g = acc_dens;
-            if(iter > u_lb && iter < u_iter) col.b = acc_dens;
-            
-            col *= (u_den * 0.015);
-            col = pow(col, vec3(0.8));
+            // TRUE NEBULA LOGIC: Only color points that ESCAPE
+            if(m > 100.0) {
+                // Brightness based on closest approach (creates the faint structures)
+                float glow = exp(-d_min * 10.0); 
+                
+                if(iter > u_lr) col.r = glow;
+                if(iter > u_lg) col.g = glow;
+                if(iter > u_lb) col.b = glow;
+                
+                col *= (u_den * 1.5);
+            }
         } else {
+            // Standard Coloring
             if(m < 100.0) col = vec3(0.0);
             else {
                 float sn = iter - log2(log2(m)) + 4.0;
@@ -306,6 +293,7 @@ const SHADER_BODY = `
             }
         }
 
+        // Overlays
         if(isAtlas) {
             vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
             if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
@@ -519,9 +507,10 @@ const ui = {
                 if(!isR && app.state.mode!==2 && !app.state.locked) {
                     const r = cv.getBoundingClientRect();
                     const cam = app.state.left;
-                    const aspect = cv.width/cv.height;
-                    const nx = ((e.clientX - r.left) / r.width - 0.5) * aspect;
-                    const ny = -((e.clientY - r.top) / r.height - 0.5); 
+                    const aspect = cv.clientWidth/cv.clientHeight;
+                    
+                    const nx = ((e.clientX - r.left) / cv.clientWidth - 0.5) * aspect;
+                    const ny = -((e.clientY - r.top) / cv.clientHeight - 0.5); 
                     
                     app.state.c.x = nx / cam.z + cam.x;
                     app.state.c.y = ny / cam.z + cam.y;
@@ -537,9 +526,10 @@ const ui = {
                     const dy = e.clientY - app.state.last.y;
                     app.state.last = {x:e.clientX, y:e.clientY};
                     
-                    const fac = 1.0 / (cv.clientHeight * cam.z);
-                    cam.x -= dx * fac * 2.0; 
-                    cam.y += dy * fac * 2.0;
+                    // Perfect 1:1 Panning Math
+                    const aspect = cv.clientWidth / cv.clientHeight;
+                    cam.x -= (dx / cv.clientWidth) * (aspect / cam.z);
+                    cam.y += (dy / cv.clientHeight) * (1.0 / cam.z);
                 }
             });
 
