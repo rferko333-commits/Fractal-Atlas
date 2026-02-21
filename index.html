@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fractal Atlas - Ultimate</title>
+    <title>Fractal Atlas - Infinity</title>
     <style>
         :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
         body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; user-select: none; }
@@ -86,6 +86,7 @@
 <div id="controls">
     <div class="ctrl-grid">
         
+        <!-- Equation Engine -->
         <div class="control-group" style="grid-column: span 2;">
             <label>Fractal Equation Library</label>
             <div style="display:flex; gap: 5px;">
@@ -109,29 +110,29 @@
         </div>
 
         <div class="control-group">
-            <label title="WebGL precision limits deep zooming to ~100,000x">Zoom Speed (Scroll)</label>
+            <label>Zoom Speed (Scroll)</label>
             <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
         </div>
 
-        <!-- Nebula Only -->
+        <!-- Nebula Physics -->
         <div class="control-group hidden" id="grp-neb-r">
-            <label class="lbl-r">Red Min Threshold <span id="val-red" class="val-disp">200</span></label>
+            <label class="lbl-r">Red Escape Threshold <span id="val-red" class="val-disp">200</span></label>
             <input type="range" id="sl-red" min="0" max="1000" value="200">
         </div>
         <div class="control-group hidden" id="grp-neb-g">
-            <label class="lbl-g">Green Min Threshold <span id="val-grn" class="val-disp">100</span></label>
+            <label class="lbl-g">Green Escape Threshold <span id="val-grn" class="val-disp">100</span></label>
             <input type="range" id="sl-grn" min="0" max="1000" value="100">
         </div>
         <div class="control-group hidden" id="grp-neb-b">
-            <label class="lbl-b">Blue Min Threshold <span id="val-blu" class="val-disp">50</span></label>
+            <label class="lbl-b">Blue Escape Threshold <span id="val-blu" class="val-disp">50</span></label>
             <input type="range" id="sl-blu" min="0" max="1000" value="50">
         </div>
         <div class="control-group hidden" id="grp-neb-den">
-            <label>Nebula Brightness</label>
+            <label>Nebula Density (Glow)</label>
             <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
         </div>
 
-        <!-- Standard Only -->
+        <!-- Aesthetics -->
         <div class="control-group" id="grp-pal">
             <label>Color Palette</label>
             <select id="sel-pal" onchange="app.updParams()">
@@ -142,7 +143,7 @@
             </select>
         </div>
 
-        <!-- Atlas Only -->
+        <!-- Atlas -->
         <div class="control-group hidden" id="grp-grid">
             <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
             <input type="range" id="sl-grid" min="2" max="100" value="10">
@@ -184,18 +185,29 @@
 
 <script>
 // --- EQUATION TRANSLATOR ---
+// Converts human text to GLSL math under the hood
 function parseEquation(eq) {
     let s = eq.toLowerCase().replace(/\s+/g, '');
-    if(s === 'burningship') return 'vec2(z.x*z.x-z.y*z.y, 2.0*abs(z.x*z.y))+c';
+    
+    // Direct matches
+    if(s === 'burningship') return 'vec2(abs(z.x)*abs(z.x)-abs(z.y)*abs(z.y), 2.0*abs(z.x*z.y))+c';
     if(s === 'tricorn') return 'vec2(z.x*z.x-z.y*z.y, -2.0*z.x*z.y)+c';
+    
+    // Convert z^2 specifically for performance
     s = s.replace(/z\^2(?!\.)/g, 'csqr(z)'); 
-    s = s.replace(/z\^([0-9.]+)/g, (match, p1) => { return p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`; });
+    
+    // Convert generic powers, ensuring GLSL float syntax (.0)
+    s = s.replace(/z\^([0-9.]+)/g, (match, p1) => {
+        return p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`;
+    });
+    
     s = s.replace(/sin\(z\)/g, 'csin(z)');
     s = s.replace(/cos\(z\)/g, 'ccos(z)');
+    
     return s;
 }
 
-// --- GLSL MATH LIBRARY ---
+// --- GLSL MATH & SHADERS ---
 const SHADER_HEAD = `
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -204,12 +216,15 @@ const SHADER_HEAD = `
     #endif
     
     vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
+    
     vec2 cpow(vec2 z, float n) {
         float r = length(z);
         if(r < 0.00001) return vec2(0.0);
         float a = atan(z.y, z.x);
         return pow(r, n) * vec2(cos(a*n), sin(a*n));
     }
+    
+    // WebGL 1.0 safe trig (avoids missing sinh/cosh functions)
     vec2 csin(vec2 z) {
         float ey = exp(z.y); float e_y = exp(-z.y);
         return vec2(sin(z.x) * (ey + e_y)/2.0, cos(z.x) * (ey - e_y)/2.0);
@@ -237,71 +252,87 @@ const SHADER_BODY = `
     void main() {
         vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
         vec2 z, c;
+        
         bool isAtlas = (u_mode == 2);
         
+        // --- PROJECTION ---
         if(isAtlas) {
             vec2 guv = uv * u_grid;
             vec2 cell = floor(guv);
             vec2 tile = fract(guv) - 0.5;
             float rng = 4.0 / u_zoom;
+            // The mapping converts screen coordinate back into Math plane
             vec2 cmap = u_offset + (cell / u_grid) * rng;
             z = tile * 3.0;
             c = cmap;
         } else {
             vec2 p = uv / u_zoom + u_offset;
-            if(u_view == 1) { z = p; c = u_c; } 
-            else { z = vec2(0.0); c = p; }      
+            if(u_view == 1) { z = p; c = u_c; } // Right screen (Julia)
+            else { z = vec2(0.0); c = p; }      // Left screen (Mandelbrot)
         }
 
+        // --- MATH ENGINE ---
         float iter = 0.0;
         float m = 0.0;
-        float d_min = 1000.0; // Distance trap for Nebula
+        float acc_dens = 0.0;
         
         const int MAX_LOOP = 10000;
+        
         for(int i=0; i<MAX_LOOP; i++) {
             if(float(i) > u_iter) break;
             
-            z = {{EQ}};
+            z = {{EQ}}; // Injected by JS
             
             m = dot(z,z);
-            if(m < d_min) d_min = m; // Track closest approach
             if(m > 100.0) break;
+            
+            // Accumulate density inside the trap for glowing gas effect
+            acc_dens += exp(-length(z) * 1.5);
             iter += 1.0;
         }
 
+        // --- RENDER ENGINE ---
         vec3 col = vec3(0.0);
         bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1); 
 
         if(isNeb) {
-            // TRUE NEBULA LOGIC: Only color points that ESCAPE
-            if(m > 100.0) {
-                // Brightness based on closest approach (creates the faint structures)
-                float glow = exp(-d_min * 10.0); 
+            // TRUE BUDDHABROT PHYSICS
+            // Only shade points that ESCAPE the set (m > 100) and haven't hit iter limit
+            if(m > 100.0 && iter < u_iter) {
                 
-                if(iter > u_lr) col.r = glow;
-                if(iter > u_lg) col.g = glow;
-                if(iter > u_lb) col.b = glow;
+                // Additive stack based on RGB thresholds
+                if(iter > u_lr) col.r = acc_dens;
+                if(iter > u_lg) col.g = acc_dens;
+                if(iter > u_lb) col.b = acc_dens;
                 
-                col *= (u_den * 1.5);
+                // Base exposure
+                col *= (u_den * 0.015);
+                
+                // Logarithmic Tone Mapping (approximates arcsinh from python)
+                col = log(col + sqrt(col*col + 1.0)); 
+                
+                // Contrast Curve
+                col = pow(col, vec3(1.4));
             }
+            // Non-escaping points (interiors) naturally stay vec3(0.0) [Black]
         } else {
-            // Standard Coloring
-            if(m < 100.0) col = vec3(0.0);
+            // STANDARD FRACTAL PHYSICS
+            if(m < 100.0) col = vec3(0.0); // Inside is black
             else {
                 float sn = iter - log2(log2(m)) + 4.0;
                 col = palette(sn * 0.03, u_pal);
             }
         }
 
-        // Overlays
+        // --- OVERLAYS ---
         if(isAtlas) {
             vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
-            if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
+            if(guv.x>0.48 || guv.y>0.48) col *= 0.5; // Draw Grid Lines
         } else if(u_view == 0) {
              float dist = distance(c, u_c);
              float sz = 0.015 / u_zoom;
-             if(dist < sz) col = vec3(1.0);
-             else if(dist < sz*1.4) col = vec3(0.0);
+             if(dist < sz) col = vec3(1.0);       // White dot center
+             else if(dist < sz*1.4) col = vec3(0.0); // Black outline
         }
 
         gl_FragColor = vec4(col, 1.0);
@@ -326,7 +357,6 @@ const app = {
             document.getElementById('error-log').innerText="FATAL: WebGL is not supported.";
             return;
         }
-        window.lastError = "";
         ui.init();
         this.compile();
         this.loop();
@@ -351,17 +381,18 @@ const app = {
         const vs = "attribute vec2 p; void main(){gl_Position=vec4(p,0,1);}";
         
         let success = true;
-        window.lastError = "";
+        let errStr = "";
 
         this.ctx.forEach(c => {
             const p = this.mkProg(c.gl, vs, fs);
-            if(p) c.prog = p; else success = false;
+            if(p) c.prog = p; 
+            else { success = false; errStr = c.lastErr; }
         });
 
         const log = document.getElementById('error-log');
         if(!success) {
             log.style.display = 'block';
-            log.innerText = `MATH ERROR:\nCould not compile equation: "${rawEq}"\n\nGPU DETAILS:\n${window.lastError}`;
+            log.innerText = `GLSL COMPILER ERROR:\nCannot parse: "${rawEq}"\n\nDETAILS:\n${errStr}`;
         } else {
             log.style.display = 'none';
         }
@@ -371,7 +402,7 @@ const app = {
         const s = (t, src) => {
             const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o);
             if(!gl.getShaderParameter(o, gl.COMPILE_STATUS)) {
-                window.lastError = gl.getShaderInfoLog(o);
+                gl.canvas.lastErr = gl.getShaderInfoLog(o);
                 return null;
             }
             return o;
@@ -526,10 +557,10 @@ const ui = {
                     const dy = e.clientY - app.state.last.y;
                     app.state.last = {x:e.clientX, y:e.clientY};
                     
-                    // Perfect 1:1 Panning Math
-                    const aspect = cv.clientWidth / cv.clientHeight;
-                    cam.x -= (dx / cv.clientWidth) * (aspect / cam.z);
-                    cam.y += (dy / cv.clientHeight) * (1.0 / cam.z);
+                    // PERFECT 1:1 PANNING
+                    const factor = 1.0 / (cv.clientHeight * cam.z);
+                    cam.x -= dx * factor; 
+                    cam.y += dy * factor;
                 }
             });
 
