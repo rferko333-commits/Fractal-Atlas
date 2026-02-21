@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Atlas</title>
+    <style>
+        /* UI & LAYOUT STYLES */
+        :root {
+            --bg-color: #000;
+            --panel-bg: rgba(20, 20, 20, 0.9);
+            --accent: #00d2ff;
+            --text: #eee;
+        }
+        body { margin: 0; overflow: hidden; background: var(--bg-color); color: var(--text); font-family: sans-serif; }
+
+        /* HEADER */
+        header {
+            height: 50px; display: flex; align-items: center; justify-content: space-between;
+            padding: 0 15px; border-bottom: 1px solid #333; background: #111;
+        }
+        #back-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+        .mode-tabs { display: flex; gap: 10px; }
+        .tab-btn {
+            background: #222; border: 1px solid #444; color: #888; padding: 5px 15px;
+            cursor: pointer; border-radius: 4px; font-weight: bold; font-size: 12px;
+        }
+        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        /* MAIN VIEWPORT - SPLIT SCREEN */
+        #viewport {
+            display: flex; height: calc(100vh - 200px); width: 100%;
+        }
+        .canvas-container {
+            flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden;
+        }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        
+        /* Overlay Labels */
+        .view-label {
+            position: absolute; top: 10px; left: 10px; 
+            background: rgba(0,0,0,0.7); padding: 2px 8px; 
+            border-radius: 4px; font-size: 12px; pointer-events: none;
+        }
+
+        /* CONTROL PANEL */
+        #controls {
+            height: 150px; background: #111; border-top: 1px solid #333;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px; padding: 15px; align-items: center;
+        }
+
+        /* Inputs */
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 10px; color: #aaa; text-transform: uppercase; }
+        input[type="range"] { width: 100%; }
+        .val-disp { font-size: 10px; color: var(--accent); float: right; }
+        
+        .action-btn {
+            background: #333; color: white; border: 1px solid #555;
+            padding: 8px; cursor: pointer; border-radius: 4px; font-size: 11px;
+        }
+        .action-btn:hover { background: #444; }
+
+        /* C-Coordinates Display */
+        #c-coords {
+            position: absolute; bottom: 160px; left: 10px;
+            background: rgba(0,0,0,0.8); padding: 5px; font-family: monospace;
+            font-size: 12px; border: 1px solid #444; display: none;
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 600px) {
+            #viewport { flex-direction: column; height: calc(100vh - 180px); }
+            .canvas-container { border-right: none; border-bottom: 1px solid #333; }
+            #controls { height: 130px; overflow-y: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <button id="back-btn" onclick="window.parent.goBack()">&#8592;</button>
+    <div class="mode-tabs">
+        <button class="tab-btn active" onclick="setMode(0)">FRACTALS</button>
+        <button class="tab-btn" onclick="setMode(1)">NEBULAE</button>
+        <button class="tab-btn" onclick="setMode(2)">ATLAS</button>
+    </div>
+    <button class="action-btn" onclick="saveImage()">SAVE VIEW</button>
+</header>
+
+<div id="viewport">
+    <!-- Left View (Source) -->
+    <div class="canvas-container" id="container-left">
+        <div class="view-label" id="label-left">Mandelbrot</div>
+        <canvas id="canvas-left"></canvas>
+    </div>
+    <!-- Right View (Julia/Child) -->
+    <div class="canvas-container" id="container-right">
+        <div class="view-label" id="label-right">Julia</div>
+        <canvas id="canvas-right"></canvas>
+    </div>
+</div>
+
+<div id="c-coords">C: -0.76, 0.12</div>
+
+<div id="controls">
+    <!-- Sliders -->
+    <div class="control-group">
+        <label>Iterations <span id="val-iter" class="val-disp">100</span></label>
+        <input type="range" id="sl-iter" min="20" max="1000" value="100">
+    </div>
+
+    <div class="control-group">
+        <label>Zoom Speed <span id="val-zoom" class="val-disp">1.0</span></label>
+        <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
+    </div>
+
+    <div class="control-group">
+        <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
+        <input type="range" id="sl-grid" min="2" max="50" step="1" value="10">
+    </div>
+
+    <div class="control-group">
+        <label>Color Shift</label>
+        <input type="range" id="sl-color" min="0" max="1" step="0.01" value="0.5">
+    </div>
+
+    <div class="control-group">
+        <label>Glow (Nebula)</label>
+        <input type="range" id="sl-glow" min="0.1" max="3.0" step="0.1" value="1.2">
+    </div>
+    
+    <button class="action-btn" onclick="resetViews()">RESET VIEW</button>
+</div>
+
+<!-- SHADER CODE (WEBGL) -->
+<script id="fs-source" type="x-shader/x-fragment">
+    precision highp float;
+
+    uniform vec2 u_res;       // Canvas Resolution
+    uniform vec2 u_offset;    // Camera Position (Center)
+    uniform float u_zoom;     // Camera Zoom
+    uniform vec2 u_c;         // The "C" value (Seed)
+    
+    uniform int u_type;       // 0=Mandel, 1=Julia, 2=AtlasMandel, 3=AtlasJulia
+    uniform int u_style;      // 0=Standard, 1=Nebula
+    
+    uniform float u_iter;     // Max Iterations
+    uniform float u_color;    // Color Shift
+    uniform float u_glow;     // Glow Strength
+    uniform float u_grid;     // Grid Size for Atlas
+
+    // Color Palette Function
+    vec3 palette(float t) {
+        vec3 a = vec3(0.5, 0.5, 0.5);
+        vec3 b = vec3(0.5, 0.5, 0.5);
+        vec3 c = vec3(1.0, 1.0, 1.0);
+        vec3 d = vec3(0.3, 0.20, 0.20); // Red/Blue tints
+        return a + b * cos(6.28318 * (c * t * u_color + d));
+    }
+
+    void main() {
+        // Normalizing Coordinates
+        vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
+        
+        // Setup Z and C based on Mode
+        vec2 z, c;
+        float zoom = u_zoom;
+        vec2 offset = u_offset;
+
+        // --- ATLAS LOGIC ---
+        if (u_type >= 2) {
+            // Create Grid
+            uv *= u_grid; // Tile the UVs
+            vec2 cell_id = floor(uv);
+            uv = fract(uv) - 0.5; // Centered local UV
+            
+            // Map Cell ID to Complex Plane for C value
+            // Scale cell_id back to approx -2 to 2 range
+            vec2 c_map = (cell_id / u_grid) * 4.0; 
+            
+            if (u_type == 2) { 
+                // Atlas of Julias (Right side of Atlas Mode)
+                z = uv * 3.0; // Zoom out slightly in tile
+                c = c_map; 
+            } else {
+                // Not typical, but just in case
+                z = vec2(0.0);
+                c = uv * 3.0 + c_map;
+            }
+        } 
+        // --- STANDARD LOGIC ---
+        else {
+            uv = uv / zoom + offset; // Apply Camera
+            if (u_type == 0) { // Mandelbrot
+                z = vec2(0.0);
+                c = uv;
+            } else { // Julia
+                z = uv;
+                c = u_c; // Use the selected C from UI
+            }
+        }
+
+        // --- FRACTAL ITERATION ---
+        float iter = 0.0;
+        float min_dist = 100.0; // For Orbit Trap (Nebula look)
+        float z_mag = 0.0;
+
+        for (float i = 0.0; i < 2000.0; i++) {
+            if (i >= u_iter) break;
+            
+            // Z = Z^2 + C
+            float x = (z.x * z.x - z.y * z.y) + c.x;
+            float y = (2.0 * z.x * z.y) + c.y;
+            z = vec2(x, y);
+            
+            z_mag = dot(z,z);
+            if (z_mag > 100.0) break;
+
+            // Update Orbit Trap (Distance to origin)
+            min_dist = min(min_dist, length(z));
+            iter++;
+        }
+
+        // --- COLORING ---
+        vec3 col = vec3(0.0);
+
+        if (u_style == 1) { 
+            // NEBULA / BUDDHABROT LOOK
+            // Uses orbit traps to create "glowing" look on the inside
+            float glow = exp(-min_dist * u_glow); 
+            float outer = iter / u_iter; // Normal escape time
+            
+            if (z_mag < 100.0) {
+                 // Inside the set (The "Buddha" body)
+                 col = vec3(glow * 0.8, glow * 0.9, glow * 1.0);
+            } else {
+                 // Outside (The Aura)
+                 col = vec3(0.0, outer * 0.2, outer * 0.5);
+            }
+        } else {
+            // STANDARD FRACTAL LOOK
+            if (z_mag < 100.0) {
+                col = vec3(0.0); // Black inside
+            } else {
+                // Smooth coloring
+                float sn = iter - log2(log2(dot(z,z))) + 4.0;
+                col = palette(sn * 0.05);
+            }
+        }
+
+        // Grid Lines for Atlas
+        if (u_type >= 2) {
+            vec2 grid_uv = abs(uv);
+            if (grid_uv.x > 0.48 || grid_uv.y > 0.48) col = vec3(0.2); 
+        }
+
+        gl_FragColor = vec4(col, 1.0);
+    }
+</script>
+
+<script id="vs-source" type="x-shader/x-vertex">
+    attribute vec2 a_position;
+    void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+    }
+</script>
+
+<script>
+    // --- STATE MANAGEMENT ---
+    const state = {
+        mode: 0, // 0=Fractals, 1=Nebulae, 2=Atlas
+        c: { x: -0.76, y: 0.12 }, // Current Seed
+        
+        // Left View (Mandelbrot/Atlas)
+        left: { offset: {x: -0.5, y: 0.0}, zoom: 1.0 },
+        
+        // Right View (Julia)
+        right: { offset: {x: 0.0, y: 0.0}, zoom: 1.0 },
+
+        params: {
+            iter: 100, grid: 10, color: 0.5, glow: 1.2
+        },
+        
+        dragging: false,
+        lastMouse: {x:0, y:0},
+        activeCanvas: null
+    };
+
+    // --- WEBGL SETUP ---
+    function initWebGL(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const gl = canvas.getContext('webgl');
+        
+        // Compile Shaders
+        const vs = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(vs, document.getElementById('vs-source').text);
+        gl.compileShader(vs);
+
+        const fs = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(fs, document.getElementById('fs-source').text);
+        gl.compileShader(fs);
+
+        if (!gl.getShaderParameter(fs, 'COMPILE_STATUS')) {
+            console.error(gl.getShaderInfoLog(fs));
+            return null;
+        }
+
+        const prog = gl.createProgram();
+        gl.attachShader(prog, vs);
+        gl.attachShader(prog, fs);
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        // Buffer Setup (Full Screen Quad)
+        const buff = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buff);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1, 1, -1, -1, 1, 
+            -1, 1, 1, -1, 1, 1
+        ]), gl.STATIC_DRAW);
+
+        const posLoc = gl.getAttribLocation(prog, 'a_position');
+        gl.enableVertexAttribArray(posLoc);
+        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+        return { gl, prog, canvas };
+    }
+
+    const ctxLeft = initWebGL('canvas-left');
+    const ctxRight = initWebGL('canvas-right');
+
+    // --- RENDER LOOP ---
+    function render(ctx, isRight) {
+        const { gl, prog, canvas } = ctx;
+        
+        // Resize
+        if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        // Uniforms
+        const loc = (name) => gl.getUniformLocation(prog, name);
+        
+        gl.uniform2f(loc('u_res'), canvas.width, canvas.height);
+        gl.uniform2f(loc('u_c'), state.c.x, state.c.y);
+        gl.uniform1f(loc('u_iter'), state.params.iter);
+        gl.uniform1f(loc('u_color'), state.params.color);
+        gl.uniform1f(loc('u_glow'), state.params.glow);
+        gl.uniform1f(loc('u_grid'), state.params.grid);
+
+        // View Specific Logic
+        let cam = isRight ? state.right : state.left;
+        gl.uniform2f(loc('u_offset'), cam.offset.x, cam.offset.y);
+        gl.uniform1f(loc('u_zoom'), cam.zoom);
+
+        // Type Logic
+        // Mode 0: L=Mandel(0), R=Julia(1)  [Standard]
+        // Mode 1: L=Mandel(0), R=Julia(1)  [Nebula Style]
+        // Mode 2: L=Atlas(2), R=Julia(1)   [Atlas]
+        
+        let type = 0;
+        if (state.mode === 0 || state.mode === 1) type = isRight ? 1 : 0;
+        if (state.mode === 2) type = isRight ? 1 : 2; // Right stays Julia to inspect tiles
+
+        gl.uniform1i(loc('u_type'), type);
+        gl.uniform1i(loc('u_style'), state.mode === 1 ? 1 : 0); // 1 is Nebula Style
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
+    function loop() {
+        render(ctxLeft, false);
+        render(ctxRight, true);
+        requestAnimationFrame(loop);
+    }
+    loop();
+
+    // --- INTERACTION ---
+    function handleMouse(e, isRight) {
+        const canvas = e.target;
+        const cam = isRight ? state.right : state.left;
+        
+        if (e.type === 'mousedown') {
+            state.dragging = true;
+            state.activeCanvas = isRight ? 'right' : 'left';
+            state.lastMouse = { x: e.clientX, y: e.clientY };
+            
+            // Set C Value if clicking on Left Canvas (Mandelbrot or Atlas)
+            if (!isRight) {
+                // Calculate logic coordinate
+                const rect = canvas.getBoundingClientRect();
+                const aspect = canvas.width / canvas.height;
+                const nx = ((e.clientX - rect.left) / canvas.width - 0.5) * 2; // -1 to 1
+                const ny = -((e.clientY - rect.top) / canvas.height - 0.5) * 2;
+
+                // If Atlas, we need specific grid math, but for now simple sync:
+                if (state.mode !== 2) {
+                    const cx = (nx * aspect) / cam.zoom + cam.offset.x;
+                    const cy = (ny) / cam.zoom + cam.offset.y;
+                    state.c = { x: cx, y: cy };
+                    updateDisplays();
+                }
+            }
+        }
+        
+        if (e.type === 'mousemove' && state.dragging && state.activeCanvas === (isRight ? 'right':'left')) {
+            const dx = e.clientX - state.lastMouse.x;
+            const dy = e.clientY - state.lastMouse.y;
+            state.lastMouse = { x: e.clientX, y: e.clientY };
+            
+            // Panning
+            cam.offset.x -= dx / (canvas.height * cam.zoom);
+            cam.offset.y += dy / (canvas.height * cam.zoom);
+        }
+
+        if (e.type === 'mouseup' || e.type === 'mouseleave') {
+            state.dragging = false;
+        }
+    }
+
+    function handleWheel(e, isRight) {
+        e.preventDefault();
+        const cam = isRight ? state.right : state.left;
+        const zoomSpeed = 0.1;
+        if (e.deltaY < 0) cam.zoom *= (1 + zoomSpeed);
+        else cam.zoom /= (1 + zoomSpeed);
+    }
+
+    // Attach Listeners
+    [ctxLeft.canvas, ctxRight.canvas].forEach((c, i) => {
+        const isR = i === 1;
+        c.addEventListener('mousedown', e => handleMouse(e, isR));
+        c.addEventListener('mousemove', e => handleMouse(e, isR));
+        window.addEventListener('mouseup', e => handleMouse(e, isR));
+        c.addEventListener('wheel', e => handleWheel(e, isR));
+    });
+
+    // --- UI LOGIC ---
+    const labels = {
+        0: ['Mandelbrot', 'Julia Set'],
+        1: ['Buddhabrot (Sim)', 'Nebula Julia'],
+        2: ['Julia Atlas', 'Julia Inspector']
+    };
+
+    function setMode(m) {
+        state.mode = m;
+        // Update Tabs
+        document.querySelectorAll('.tab-btn').forEach((b, i) => {
+            b.classList.toggle('active', i === m);
+        });
+        // Update Labels
+        document.getElementById('label-left').innerText = labels[m][0];
+        document.getElementById('label-right').innerText = labels[m][1];
+    }
+
+    function updateDisplays() {
+        document.getElementById('c-coords').style.display = 'block';
+        document.getElementById('c-coords').innerText = `C: ${state.c.x.toFixed(4)}, ${state.c.y.toFixed(4)}`;
+    }
+
+    function resetViews() {
+        state.left = { offset: {x: -0.5, y: 0.0}, zoom: 1.0 };
+        state.right = { offset: {x: 0.0, y: 0.0}, zoom: 1.0 };
+    }
+
+    function saveImage() {
+        const link = document.createElement('a');
+        link.download = `fractal_atlas_${Date.now()}.png`;
+        // Save the right canvas (usually the result/art)
+        link.href = ctxRight.canvas.toDataURL();
+        link.click();
+    }
+
+    // Bind Controls
+    document.getElementById('sl-iter').oninput = e => { state.params.iter = e.target.value; document.getElementById('val-iter').innerText = e.target.value; };
+    document.getElementById('sl-grid').oninput = e => { state.params.grid = e.target.value; document.getElementById('val-grid').innerText = e.target.value; };
+    document.getElementById('sl-color').oninput = e => state.params.color = e.target.value;
+    document.getElementById('sl-glow').oninput = e => state.params.glow = e.target.value;
+
+</script>
+</body>
+</html>
