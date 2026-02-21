@@ -6,7 +6,7 @@
     <title>Fractal Atlas - Pro Edition</title>
     <style>
         :root { --bg: #050505; --panel: #111; --accent: #00d2ff; --text: #ddd; --danger: #ff4444; --success: #00ff88; }
-        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; user-select: none; }
+        body { margin: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; user-select: none; }
 
         /* HEADER */
         header { height: 45px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; background: #080808; border-bottom: 1px solid #333; }
@@ -21,7 +21,6 @@
         #viewport { display: flex; height: calc(100vh - 205px); width: 100%; position: relative; }
         .canvas-container { flex: 1; position: relative; border-right: 1px solid #333; overflow: hidden; background: #000; }
         
-        /* Dual Canvas Setup (GL for Fast, 2D for True Nebula) */
         canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
         .cvs-2d { z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.2s;}
         .mode-nebula .cvs-2d { opacity: 1; pointer-events: auto; }
@@ -70,12 +69,11 @@
 <div id="viewport">
     <div class="canvas-container">
         <div class="view-label" id="lbl-left">Mandelbrot</div>
-        <!-- Dual Canvas Architecture -->
         <canvas id="gl-left"></canvas>
         <canvas id="2d-left" class="cvs-2d"></canvas>
     </div>
     <div class="canvas-container">
-        <div class="view-label" id="lbl-right">Julia</div>
+        <div class="view-label" id="lbl-right">Julia Set</div>
         <canvas id="gl-right"></canvas>
         <canvas id="2d-right" class="cvs-2d"></canvas>
     </div>
@@ -89,7 +87,6 @@
 
 <div id="controls">
     <div class="ctrl-grid">
-        
         <div class="control-group">
             <label>Fractal Equation</label>
             <select id="sel-eq" onchange="app.triggerReset()">
@@ -111,7 +108,6 @@
             <input type="range" id="sl-zoom" min="0.1" max="5.0" step="0.1" value="1.0">
         </div>
 
-        <!-- Nebula Only -->
         <div class="control-group hidden" id="grp-neb-r">
             <label class="lbl-r">Red Threshold <span id="val-red" class="val-disp">200</span></label>
             <input type="range" id="sl-red" min="0" max="1000" value="200">
@@ -129,7 +125,6 @@
             <input type="range" id="sl-den" min="0.1" max="5.0" step="0.1" value="1.5">
         </div>
 
-        <!-- Standard Only -->
         <div class="control-group" id="grp-pal">
             <label>Color Palette</label>
             <select id="sel-pal" onchange="app.triggerReset()">
@@ -140,7 +135,6 @@
             </select>
         </div>
 
-        <!-- Atlas Only -->
         <div class="control-group hidden" id="grp-grid">
             <label>Atlas Grid Size <span id="val-grid" class="val-disp">10</span></label>
             <input type="range" id="sl-grid" min="2" max="100" value="10">
@@ -153,15 +147,14 @@
     </div>
 </div>
 
-<!-- SAVE MODAL -->
 <div id="save-modal">
     <div class="modal-box">
         <h3 style="margin-top:0; color:white;">Save High-Res Render</h3>
         <div class="modal-row">
             <label style="display:block; margin-bottom:5px; color:#aaa; font-size:10px;">TARGET WINDOW</label>
             <select id="save-view">
-                <option value="left">Left Window (Mandelbrot)</option>
-                <option value="right" selected>Right Window (Julia)</option>
+                <option value="left">Left Window</option>
+                <option value="right" selected>Right Window</option>
             </select>
         </div>
         <div class="modal-row" id="row-res">
@@ -171,7 +164,7 @@
                 <option value="2">HD (1920x1080)</option>
                 <option value="4">4K (3840x2160)</option>
             </select>
-            <div style="font-size: 10px; color: var(--accent); margin-top: 5px;">Note: Nebulae are saved natively from the progressive canvas to preserve true trajectory detail.</div>
+            <div style="font-size: 10px; color: var(--accent); margin-top: 5px;">Note: Nebulae are saved natively from the progressive canvas to preserve trajectory detail.</div>
         </div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
             <button class="action-btn" onclick="ui.toggleModal(false)">Cancel</button>
@@ -182,7 +175,7 @@
 
 <script>
 // =======================================================
-// MODULE 1: WEBGL RENDERER (For Standard Fractals & Atlas)
+// MODULE 1: WEBGL RENDERER (Fractals & Atlas Modes)
 // =======================================================
 const GL_CORE = {
     setup: function(canvasId) {
@@ -199,7 +192,8 @@ const GL_CORE = {
             
             uniform vec2 u_res; uniform vec2 u_offset; uniform float u_zoom; uniform vec2 u_c;
             uniform int u_mode; uniform int u_view; uniform float u_iter; uniform float u_grid;
-            uniform int u_pal; uniform int u_eq;
+            uniform int u_pal; uniform int u_eq; uniform float u_den;
+            uniform float u_lr; uniform float u_lg; uniform float u_lb;
 
             vec3 palette(float t, int id) {
                 vec3 a=vec3(0.5), b=vec3(0.5), c=vec3(1.0), d;
@@ -227,38 +221,52 @@ const GL_CORE = {
                     if(u_view == 1) { z = p; c = u_c; } else { z = vec2(0.0); c = p; }
                 }
 
-                float iter = 0.0; float m = 0.0;
+                float iter = 0.0; float m = 0.0; float d_min = 1000.0;
                 
                 for(int i=0; i<10000; i++) {
                     if(float(i) > u_iter) break;
                     
-                    // Core Equation Engine
-                    if(u_eq == 0) z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c; // z^2
-                    else if(u_eq == 1) z = vec2(z.x*z.x*z.x - 3.0*z.x*z.y*z.y, 3.0*z.x*z.x*z.y - z.y*z.y*z.y) + c; // z^3
+                    if(u_eq == 0) z = vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y) + c; 
+                    else if(u_eq == 1) z = vec2(z.x*z.x*z.x - 3.0*z.x*z.y*z.y, 3.0*z.x*z.x*z.y - z.y*z.y*z.y) + c;
                     else if(u_eq == 2) {
                         float r2=z.x*z.x+z.y*z.y; float r4=r2*r2; float r5=r4*sqrt(r2);
-                        float a=atan(z.y,z.x)*5.0; z = r5*vec2(cos(a),sin(a)) + c; // z^5
+                        float a=atan(z.y,z.x)*5.0; z = r5*vec2(cos(a),sin(a)) + c;
                     }
-                    else if(u_eq == 3) z = vec2(z.x*z.x - z.y*z.y, 2.0*abs(z.x*z.y)) + c; // Burning Ship
-                    else if(u_eq == 4) z = vec2(z.x*z.x - z.y*z.y, -2.0*z.x*z.y) + c; // Tricorn
+                    else if(u_eq == 3) z = vec2(z.x*z.x - z.y*z.y, 2.0*abs(z.x*z.y)) + c;
+                    else if(u_eq == 4) z = vec2(z.x*z.x - z.y*z.y, -2.0*z.x*z.y) + c;
                     
                     m = dot(z,z);
+                    if(m < d_min) d_min = m;
                     if(m > 100.0) break;
                     iter += 1.0;
                 }
 
                 vec3 col = vec3(0.0);
-                if(m >= 100.0) {
-                    float sn = iter - log2(log2(m)) + 4.0;
-                    col = palette(sn * 0.03, u_pal);
+                bool isNebAtlas = (u_mode == 2 && u_view == 1);
+                
+                if(isNebAtlas) {
+                    // Fast WebGL Approximation for Nebula Atlas
+                    if(m > 100.0 && iter < u_iter) {
+                        float glow = exp(-d_min * 10.0);
+                        if(iter > u_lr) col.r = glow;
+                        if(iter > u_lg) col.g = glow;
+                        if(iter > u_lb) col.b = glow;
+                        col *= (u_den * 2.0);
+                        col = log(col + sqrt(col*col + 1.0)); // Tone map
+                        col = pow(col, vec3(1.4));
+                    }
+                } else {
+                    // Standard Coloring
+                    if(m >= 100.0) {
+                        float sn = iter - log2(log2(m)) + 4.0;
+                        col = palette(sn * 0.03, u_pal);
+                    }
                 }
 
-                // Grid & Dot Overlays (Calculated in SCREEN SPACE to prevent float precision pixelation)
                 if(isAtlas) {
                     vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
                     if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
                 } else if(u_view == 0) {
-                     // Screen Space Dot
                      vec2 screen_c = (u_c - u_offset) * u_zoom;
                      float dist = distance(uv, screen_c);
                      if(dist < 0.012) col = vec3(1.0);
@@ -300,6 +308,8 @@ const GL_CORE = {
         u('u_res', [cvs.width, cvs.height]);
         u('u_offset', [cam.x, cam.y]); u('u_zoom', cam.z); u('u_c', [state.c.x, state.c.y]);
         u('u_iter', state.p.iter); u('u_grid', state.p.grid);
+        u('u_den', state.p.den); u('u_lr', state.p.r); u('u_lg', state.p.g); u('u_lb', state.p.b);
+        
         ui('u_mode', state.mode); ui('u_view', isRight?1:0); ui('u_pal', state.p.pal); ui('u_eq', state.p.eq);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -307,15 +317,14 @@ const GL_CORE = {
 };
 
 // =======================================================
-// MODULE 2: JS CPU PROGRESSIVE ENGINE (For True Nebulae)
+// MODULE 2: CPU PROGRESSIVE ENGINE (For True Nebulae)
 // =======================================================
 class NebulaRenderer {
     constructor(canvasId) {
         this.cvs = document.getElementById(canvasId);
         this.ctx = this.cvs.getContext('2d', {willReadFrequently: true});
         this.hist = null; this.imgData = null;
-        this.maxR = 1; this.maxG = 1; this.maxB = 1;
-        this.isActive = false;
+        this.frames = 0;
     }
 
     reset() {
@@ -329,7 +338,7 @@ class NebulaRenderer {
             this.imgData = this.ctx.createImageData(w, h);
         }
         if(this.hist) this.hist.fill(0);
-        this.maxR=1; this.maxG=1; this.maxB=1;
+        this.frames = 0;
     }
 
     renderBatch(state, isRight) {
@@ -337,35 +346,29 @@ class NebulaRenderer {
         const w = this.cvs.width; const h = this.cvs.height;
         const cam = isRight ? state.right : state.left;
         
-        // Math Bounds matches GLSL
-        const vw = (w/h) * (1.0 / cam.z);
-        const vh = 1.0 / cam.z;
-        const minX = cam.x - vw/2;
-        const minY = cam.y - vh/2;
+        const vw = (w/h) * (1.0 / cam.z); const vh = 1.0 / cam.z;
+        const minX = cam.x - vw/2; const minY = cam.y - vh/2;
         
-        const batch = 15000; // Trajectories per frame
-        const p = state.p;
-        const max_i = p.iter;
+        const batch = 30000; // High count for fast convergence
+        const p = state.p; const max_i = p.iter;
         const trX = new Float32Array(max_i); const trY = new Float32Array(max_i);
 
+        this.frames++;
+
         for(let i=0; i<batch; i++) {
-            // Random point in view + margin (to catch orbits that enter screen)
-            let sr = cam.x + (Math.random()-0.5) * vw * 1.5;
-            let si = cam.y + (Math.random()-0.5) * vh * 1.5;
+            let sr = cam.x + (Math.random()-0.5) * vw * 1.2;
+            let si = cam.y + (Math.random()-0.5) * vh * 1.2;
             
             let cr = isRight ? state.c.x : sr;
             let ci = isRight ? state.c.y : si;
             let zx = isRight ? sr : 0.0;
             let zy = isRight ? si : 0.0;
             
-            let step = 0;
-            let esc = false;
+            let step = 0; let esc = false;
             
-            // Equation Engine
             while(step < max_i) {
                 trX[step] = zx; trY[step] = zy;
                 let nx, ny;
-                
                 if(p.eq === 0) { nx = zx*zx-zy*zy+cr; ny = 2.0*zx*zy+ci; }
                 else if(p.eq === 1) { nx = zx*zx*zx - 3.0*zx*zy*zy + cr; ny = 3.0*zx*zx*zy - zy*zy*zy + ci; }
                 else if(p.eq === 2) { 
@@ -380,46 +383,48 @@ class NebulaRenderer {
                 step++;
             }
             
-            // TRUE BUDDHABROT: Only plot if escaped!
             if(esc && step > 0) {
                 for(let s=0; s<step; s++) {
                     let px = Math.floor((trX[s] - minX) / vw * w);
                     let py = Math.floor((trY[s] - minY) / vh * h);
                     
                     if(px>=0 && px<w && py>=0 && py<h) {
-                        let idx = ((h - 1 - py) * w + px) * 3; // Invert Y
-                        if(step > p.r) { this.hist[idx]++; if(this.hist[idx]>this.maxR) this.maxR=this.hist[idx]; }
-                        if(step > p.g) { this.hist[idx+1]++; if(this.hist[idx+1]>this.maxG) this.maxG=this.hist[idx+1]; }
-                        if(step > p.b) { this.hist[idx+2]++; if(this.hist[idx+2]>this.maxB) this.maxB=this.hist[idx+2]; }
+                        let idx = ((h - 1 - py) * w + px) * 3;
+                        if(step > p.r) this.hist[idx]++; 
+                        if(step > p.g) this.hist[idx+1]++; 
+                        if(step > p.b) this.hist[idx+2]++; 
                     }
                 }
             }
         }
         
-        // Tone Mapping & Draw
+        // --- LOGARITHMIC TONE MAPPING (Fixes the dimness issue!) ---
         const data = this.imgData.data;
         const len = w * h * 3;
-        let j=0;
         
+        // Left side (Buddhabrot) needs a massive gain multiplier because hits are rare
+        // Right side (Julia) gets concentrated hits rapidly.
+        const baseGain = isRight ? 20.0 : 800.0; 
+        const scale = (p.den * baseGain) / this.frames;
+        const norm = 1.0 / Math.log1p(baseGain); // Normalize relative to the gain ceiling
+
+        let j=0;
         for(let i=0; i<len; i+=3) {
-            // Arcsinh scales the extreme brightness variations
-            let r = Math.asinh(this.hist[i] / this.maxR * p.den * 50.0) / 4.0;
-            let g = Math.asinh(this.hist[i+1] / this.maxG * p.den * 50.0) / 4.0;
-            let b = Math.asinh(this.hist[i+2] / this.maxB * p.den * 50.0) / 4.0;
+            let r = Math.log1p(this.hist[i] * scale) * norm;
+            let g = Math.log1p(this.hist[i+1] * scale) * norm;
+            let b = Math.log1p(this.hist[i+2] * scale) * norm;
             
-            data[j++] = Math.min(255, Math.pow(r, 1.4) * 255);
-            data[j++] = Math.min(255, Math.pow(g, 1.4) * 255);
-            data[j++] = Math.min(255, Math.pow(b, 1.4) * 255);
+            data[j++] = Math.min(255, Math.pow(r, 1.2) * 255);
+            data[j++] = Math.min(255, Math.pow(g, 1.2) * 255);
+            data[j++] = Math.min(255, Math.pow(b, 1.2) * 255);
             data[j++] = 255;
         }
-        
         this.ctx.putImageData(this.imgData, 0, 0);
         
         // Draw Dot over Canvas (Left only)
         if(!isRight) {
-            const asp = w/h;
-            const sx = (state.c.x - cam.x) * cam.z * h + (w/2);
-            const sy = -(state.c.y - cam.y) * cam.z * h + (h/2);
+            const sx = (state.c.x - cam.x) / vw * w + (w/2);
+            const sy = -(state.c.y - cam.y) / vh * h + (h/2); // Invert Y
             this.ctx.beginPath();
             this.ctx.arc(sx, sy, 5, 0, Math.PI*2);
             this.ctx.fillStyle = 'white'; this.ctx.fill();
@@ -458,16 +463,15 @@ const app = {
 
     loop: function() {
         if(!this.state.saving) {
-            if(this.state.mode === 1) { // Nebula
+            if(this.state.mode === 1) { 
                 this.nebCtx[0].renderBatch(this.state, false);
                 this.nebCtx[1].renderBatch(this.state, true);
-            } else { // Fractal / Atlas
+            } else { 
                 GL_CORE.render(this.glCtx[0], this.state, false);
                 GL_CORE.render(this.glCtx[1], this.state, true);
             }
         }
         
-        // Warnings
         const maxZ = Math.max(this.state.left.z, this.state.right.z);
         document.getElementById('zoom-warning').style.display = (maxZ > 50000 && this.state.mode !== 1) ? 'block' : 'none';
         
@@ -481,7 +485,7 @@ const app = {
         
         let l="Mandelbrot", r="Julia Set";
         if(m===1) { l="Buddhabrot"; r="Nebula Julia"; }
-        if(m===2) { l="Standard Atlas"; r="Standard Atlas"; } // Atlas is standard only
+        if(m===2) { l="Julia Atlas"; r="Nebula Atlas"; }
         document.getElementById('lbl-left').innerText=l;
         document.getElementById('lbl-right').innerText=r;
         
@@ -503,10 +507,8 @@ const app = {
         let targetCvs;
         
         if(isNeb) {
-            // Nebulas take time to render, save exactly what is on screen
             targetCvs = view==='left' ? this.nebCtx[0].cvs : this.nebCtx[1].cvs;
         } else {
-            // WebGL can render instantly at 8K
             this.state.saving = true;
             const ctx = view==='left' ? this.glCtx[0] : this.glCtx[1];
             const ow = ctx.cvs.width, oh = ctx.cvs.height;
@@ -516,7 +518,6 @@ const app = {
             
             ctx.cvs.width = w; ctx.cvs.height = h; ctx.gl.viewport(0,0,w,h);
             GL_CORE.render(ctx, this.state, view==='right');
-            
             targetCvs = ctx.cvs;
         }
         
@@ -547,10 +548,9 @@ const ui = {
         
         document.querySelectorAll('input[type=range], select').forEach(e => {
             e.addEventListener('input', this.updParams);
-            e.addEventListener('change', () => app.triggerReset()); // Hard reset on change
+            e.addEventListener('change', () => app.triggerReset()); 
         });
         
-        // Mouse Controllers
         document.querySelectorAll('.canvas-container').forEach((cont, idx) => {
             const isR = idx===1;
             
@@ -568,7 +568,6 @@ const ui = {
                     const r = cont.getBoundingClientRect();
                     const cam = app.state.left;
                     const aspect = cont.clientWidth/cont.clientHeight;
-                    
                     const nx = ((e.clientX - r.left) / cont.clientWidth - 0.5) * aspect;
                     const ny = -((e.clientY - r.top) / cont.clientHeight - 0.5); 
                     
@@ -576,7 +575,7 @@ const ui = {
                     app.state.c.y = ny / cam.z + cam.y;
                     
                     document.getElementById('c-coords').innerText = `C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`;
-                    if(app.state.mode === 1) app.triggerReset(); // Reset Julia Neb
+                    if(app.state.mode === 1) app.triggerReset(); 
                 }
             });
 
@@ -587,7 +586,6 @@ const ui = {
                     const dy = e.clientY - app.state.last.y;
                     app.state.last = {x:e.clientX, y:e.clientY};
                     
-                    // PERFECT 1:1 PANNING
                     const factor = 1.0 / (cont.clientHeight * cam.z);
                     cam.x -= dx * factor; 
                     cam.y += dy * factor;
@@ -616,7 +614,10 @@ const ui = {
         const m = app.state.mode;
         const s = (id, show) => document.getElementById(id).classList.toggle('hidden', !show);
         
-        s('grp-neb-r', m===1); s('grp-neb-g', m===1); s('grp-neb-b', m===1); s('grp-neb-den', m===1);
+        s('grp-neb-r', m===1 || m===2); 
+        s('grp-neb-g', m===1 || m===2); 
+        s('grp-neb-b', m===1 || m===2); 
+        s('grp-neb-den', m===1 || m===2);
         s('grp-pal', m!==1);
         s('grp-grid', m===2);
     }
