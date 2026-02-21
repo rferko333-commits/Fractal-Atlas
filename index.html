@@ -185,23 +185,17 @@
 
 <script>
 // --- EQUATION TRANSLATOR ---
-// Converts human-readable math into strict GLSL
 function parseEquation(eq) {
     let s = eq.toLowerCase().replace(/\s+/g, '');
     
-    // Presets
     if(s === 'burningship') return 'vec2(z.x*z.x-z.y*z.y, 2.0*abs(z.x*z.y))+c';
     if(s === 'tricorn') return 'vec2(z.x*z.x-z.y*z.y, -2.0*z.x*z.y)+c';
     
-    // Powers
     s = s.replace(/z\^2(?!\.)/g, 'csqr(z)'); 
-    
-    // CRITICAL FIX: Automatically inject ".0" into integers for strict WebGL typing
     s = s.replace(/z\^([0-9.]+)/g, (match, p1) => {
         return p1.includes('.') ? `cpow(z,${p1})` : `cpow(z,${p1}.0)`;
     });
     
-    // Trig
     s = s.replace(/sin\(z\)/g, 'csin(z)');
     s = s.replace(/cos\(z\)/g, 'ccos(z)');
     
@@ -209,6 +203,7 @@ function parseEquation(eq) {
 }
 
 // --- GLSL MATH LIBRARY ---
+// CRITICAL FIX: Replaced unsupported sinh/cosh with manually calculated exp() equations.
 const SHADER_HEAD = `
     #ifdef GL_FRAGMENT_PRECISION_HIGH
     precision highp float;
@@ -216,18 +211,30 @@ const SHADER_HEAD = `
     precision mediump float;
     #endif
     
-    // Complex Math Functions
     vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
+    
     vec2 cpow(vec2 z, float n) {
         float r = length(z);
         if(r < 0.00001) return vec2(0.0);
         float a = atan(z.y, z.x);
         return pow(r, n) * vec2(cos(a*n), sin(a*n));
     }
-    vec2 csin(vec2 z) { return vec2(sin(z.x)*cosh(z.y), cos(z.x)*sinh(z.y)); }
-    vec2 ccos(vec2 z) { return vec2(cos(z.x)*cosh(z.y), -sin(z.x)*sinh(z.y)); }
     
-    // Palettes
+    // Manually built trig functions for WebGL 1.0 compatibility
+    vec2 csin(vec2 z) {
+        float ey = exp(z.y); float e_y = exp(-z.y);
+        float ch = (ey + e_y) / 2.0;
+        float sh = (ey - e_y) / 2.0;
+        return vec2(sin(z.x) * ch, cos(z.x) * sh);
+    }
+    
+    vec2 ccos(vec2 z) {
+        float ey = exp(z.y); float e_y = exp(-z.y);
+        float ch = (ey + e_y) / 2.0;
+        float sh = (ey - e_y) / 2.0;
+        return vec2(cos(z.x) * ch, -sin(z.x) * sh);
+    }
+    
     vec3 palette(float t, int id) {
         vec3 a=vec3(0.5), b=vec3(0.5), c=vec3(1.0), d;
         if(id==0) d=vec3(0.3,0.2,0.2);
@@ -249,22 +256,20 @@ const SHADER_BODY = `
         
         bool isAtlas = (u_mode == 2);
         
-        // --- SPACE SETUP ---
         if(isAtlas) {
             vec2 guv = uv * u_grid;
             vec2 cell = floor(guv);
             vec2 tile = fract(guv) - 0.5;
             float rng = 4.0 / u_zoom;
             vec2 cmap = u_offset + (cell / u_grid) * rng;
-            z = tile * 3.0; // Zoom out slightly inside tile
+            z = tile * 3.0;
             c = cmap;
         } else {
             vec2 p = uv / u_zoom + u_offset;
-            if(u_view == 1) { z = p; c = u_c; } // Right screen (Julia)
-            else { z = vec2(0.0); c = p; }      // Left screen (Mandelbrot)
+            if(u_view == 1) { z = p; c = u_c; } 
+            else { z = vec2(0.0); c = p; }      
         }
 
-        // --- MATH ENGINE ---
         float iter = 0.0;
         float m = 0.0;
         float acc_dens = 0.0;
@@ -274,34 +279,26 @@ const SHADER_BODY = `
         for(int i=0; i<MAX_LOOP; i++) {
             if(float(i) > u_iter) break;
             
-            // INJECTED EQUATION
             z = {{EQ}};
             
             m = dot(z,z);
             if(m > 100.0) break;
             
-            // Nebula Orbit Trap (highlights the structure before escape)
             acc_dens += exp(-length(z) * 1.5);
-            
             iter += 1.0;
         }
 
-        // --- RENDER ENGINE ---
         vec3 col = vec3(0.0);
-        bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1); // Nebula or Nebula Atlas
+        bool isNeb = (u_mode == 1) || (u_mode == 2 && u_view == 1); 
 
         if(isNeb) {
-            // Buddhabrot / Nebula Logic
-            // If the point survives past the threshold, it adds its density
             if(iter > u_lr && iter < u_iter) col.r = acc_dens;
             if(iter > u_lg && iter < u_iter) col.g = acc_dens;
             if(iter > u_lb && iter < u_iter) col.b = acc_dens;
             
-            // Apply Master Brightness & Gamma Correct
             col *= (u_den * 0.015);
             col = pow(col, vec3(0.8));
         } else {
-            // Standard Fractal Logic
             if(m < 100.0) col = vec3(0.0);
             else {
                 float sn = iter - log2(log2(m)) + 4.0;
@@ -309,12 +306,10 @@ const SHADER_BODY = `
             }
         }
 
-        // --- UI OVERLAYS ---
         if(isAtlas) {
             vec2 guv = abs(fract(gl_FragCoord.xy/u_res.y * u_grid) - 0.5);
             if(guv.x>0.48 || guv.y>0.48) col *= 0.5;
         } else if(u_view == 0) {
-             // Selected Coordinate Dot (Mandelbrot only)
              float dist = distance(c, u_c);
              float sz = 0.015 / u_zoom;
              if(dist < sz) col = vec3(1.0);
@@ -340,7 +335,7 @@ const app = {
         this.ctx = [this.mkCtx('cvs-left'), this.mkCtx('cvs-right')];
         if(!this.ctx[0].gl) {
             document.getElementById('error-log').style.display='block';
-            document.getElementById('error-log').innerText="FATAL: WebGL is not supported on this browser/device.";
+            document.getElementById('error-log').innerText="FATAL: WebGL is not supported.";
             return;
         }
         window.lastError = "";
@@ -507,7 +502,6 @@ const ui = {
         
         document.querySelectorAll('input[type=range], select').forEach(e => e.addEventListener('input', app.updParams));
         
-        // Setup Mouse / Lock
         app.ctx.forEach((c, idx) => {
             const isR = idx===1;
             const cv = c.cvs;
@@ -522,7 +516,6 @@ const ui = {
                 app.state.active = isR ? 'r' : 'l';
                 app.state.last = {x:e.clientX, y:e.clientY};
                 
-                // Select Seed Math
                 if(!isR && app.state.mode!==2 && !app.state.locked) {
                     const r = cv.getBoundingClientRect();
                     const cam = app.state.left;
