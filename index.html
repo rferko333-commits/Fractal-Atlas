@@ -251,6 +251,20 @@
 
         .action-btn { background: #333; color: white; border: 1px solid #555; padding: 10px 15px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; text-align: center; transition: background 0.2s; }
         .action-btn:hover { background: #444; }
+        .manual-select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .manual-select:hover { background: #444; }
         .btn-primary { background: var(--accent-color); color: black; border: none; }
         .btn-primary:hover { background: #33eebb; }
         .btn-primary:disabled { background: #555; color: #888; cursor: not-allowed; }
@@ -300,7 +314,12 @@
     <!-- HEADER -->
     <header>
         <div class="header-left">
-            <button class="icon-btn" onclick="ui.toggleManual()" title="Theory Manual" style="font-size: 20px;">📖 Manual</button>
+            <!-- New Dropdown Links to Substack -->
+            <select class="manual-select" onchange="if(this.value) window.open(this.value, '_blank'); this.selectedIndex=0;">
+                <option value="" disabled selected>📖 Read Theory...</option>
+                <option value="https://ryanferko.substack.com/p/reality-fractal-simplified">Reality Fractal - Simplified</option>
+                <option value="https://ryanferko.substack.com/p/reality-fractals-dynamics">Reality Fractal's Dynamics</option>
+            </select>
         </div>
         <div class="mode-tabs">
             <button class="tab-btn active" onclick="app.setMode(0)">FRACTALS</button>
@@ -397,20 +416,7 @@
     </div>
 
     <!-- Theory Manual Modal (Simplified to not waste tokens, identical to original) -->
-    <div id="manual-modal">
-        <div class="manual-box">
-            <div class="manual-header">
-                <h2>Reality Fractal: Theory of Everything</h2>
-                <button class="close-manual-btn" onclick="ui.toggleManual()">&times;</button>
-            </div>
-            <div class="manual-content">
-                <p>Reality is a fractal (RF), more specifically, a multifractal. A fractal is a pattern that is self-similar with an infinite perimeter and a finite area. One can zoom into the perimeter forever and still find more self-similar structures at ever finer scales.</p>
-                <p><em>Refer to previous Theory logic here. Interface functions remain undisturbed below.</em></p>
-                <h3>This is Reality Fractal, the Theory of Everything.</h3>
-                <div style="height: 40px;"></div>
-            </div>
-        </div>
-    </div>
+   
 
 <script>
 /**
@@ -1378,10 +1384,6 @@ const ui = {
     
     toggleSettings: () => document.getElementById('settings-menu').classList.toggle('open'),
     
-    toggleManual: () => {
-        const modal = document.getElementById('manual-modal');
-        modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    },
 
     toggleModal: (show) => { 
         document.getElementById('save-modal').style.display = show ? 'flex' : 'none'; 
