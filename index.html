@@ -1,3 +1,5 @@
+--- START OF FILE FractalAtlas.html ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,7 +32,6 @@
             touch-action: none;
         }
 
-
         /* --- BIFURCATION 3D VIEW --- */
         #bifurcation-view {
             display: none;
@@ -42,7 +43,6 @@
         }
         #bifurcation-view.active { display: flex; }
         #bif-canvas {
-            /* Override global canvas { position:absolute } so flex layout works */
             position: relative !important;
             top: auto !important; left: auto !important;
             width: 100% !important;
@@ -95,16 +95,6 @@
         .header-right {
             justify-content: flex-end;
             gap: 15px;
-        }
-
-        .app-title {
-            font-weight: 800;
-            letter-spacing: 1px;
-            font-size: 18px;
-            color: white;
-            margin: 0;
-            display: flex;
-            align-items: center;
         }
 
         .mode-tabs {
@@ -276,7 +266,6 @@
 
         .settings-content { flex: 1; overflow-y: auto; padding: 20px; }
         #mobile-controls-target .ctrl-grid { display: flex !important; flex-direction: column !important; gap: 15px; }
-        h3.settings-title { margin: 0 0 20px 0; color: white; }
 
         /* --- WIDGETS --- */
         .ctrl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; width: 100%; }
@@ -292,20 +281,7 @@
 
         .action-btn { background: #333; color: white; border: 1px solid #555; padding: 10px 15px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; text-align: center; transition: background 0.2s; }
         .action-btn:hover { background: #444; }
-        .manual-select {
-            background: #333;
-            color: white;
-            border: 1px solid #555;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 5px;
-            margin-right: 10px;
-            -webkit-appearance: none;
-            appearance: none;
-        }
+        .manual-select { background: #333; color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-left: 5px; margin-right: 10px; -webkit-appearance: none; appearance: none; }
         .manual-select:hover { background: #444; }
         .btn-primary { background: var(--accent-color); color: black; border: none; }
         .btn-primary:hover { background: #33eebb; }
@@ -318,22 +294,6 @@
         #save-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 500; align-items: center; justify-content: center; }
         .modal-box { background: #181818; border: 1px solid #444; padding: 25px; width: 90%; max-width: 350px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 
-        /* --- MANUAL MODAL --- */
-        #manual-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 1000; align-items: center; justify-content: center; user-select: text; -webkit-user-select: text;}
-        .manual-box { background: #151515; border: 1px solid #444; padding: 0; width: 95%; max-width: 800px; height: 90%; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); display: flex; flex-direction: column; position: relative; }
-        .manual-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; border-radius: 8px 8px 0 0; }
-        .manual-header h2 { margin: 0; color: white; font-size: 20px; }
-        .close-manual-btn { background: none; border: none; color: #aaa; font-size: 28px; cursor: pointer; transition: color 0.2s; }
-        .close-manual-btn:hover { color: white; }
-        .manual-content { flex: 1; overflow-y: auto; padding: 30px; color: #ccc; font-size: 15px; line-height: 1.7; font-family: -apple-system, sans-serif; }
-        .manual-content p { margin-bottom: 20px; }
-        .manual-content h3 { color: var(--accent-color); margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        .manual-content ol { margin-bottom: 20px; padding-left: 20px; }
-        .manual-content li { margin-bottom: 15px; }
-        .img-placeholder { background: #222; border: 1px dashed #555; padding: 30px; text-align: center; margin: 15px 0; border-radius: 4px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .img-placeholder span { font-family: monospace; color: #888; font-size: 12px; }
-        .caption { font-size: 13px; color: #999; font-style: italic; text-align: center; margin-top: -5px; margin-bottom: 25px; }
-
        /* --- MOBILE RESPONSIVENESS --- */
         @media (max-width: 768px) {
             header { padding: 0 4px; }
@@ -345,9 +305,7 @@
             #viewport { flex-direction: column; }
             .canvas-container { border-right: none; border-bottom: 1px solid #333; }
             #bottom-controls { display: none; }
-            #info-overlay { bottom: 10px; }
             #settings-menu { width: 85%; }
-            .manual-content { padding: 15px; font-size: 14px; }
         }
     </style>
 </head>
@@ -356,7 +314,6 @@
     <!-- HEADER -->
     <header>
         <div class="header-left">
-            <!-- New Dropdown Links to Substack -->
             <select class="manual-select" onchange="if(this.value) window.open(this.value, '_blank'); this.selectedIndex=0;">
                 <option value="" disabled selected>📖 Read Theory</option>
                 <option value="https://ryanferko.substack.com/p/reality-fractal-simplified">Reality Fractal - Simplified</option>
@@ -431,7 +388,11 @@
                         <option value="1">Viridis</option>
                         <option value="2">Ice</option>
                         <option value="3">Electric</option>
-                        <option value="4">Nebula Rainbow</option>
+                        <option value="4">Neon Sunrise</option>
+                        <option value="5">Midnight Deep</option>
+                        <option value="6">Aurora</option>
+                        <option value="7">Cyberpunk</option>
+                        <option value="8">Nebula Rainbow</option>
                     </select>
                 </div>
                 <div class="control-group">
@@ -469,7 +430,7 @@
     <!-- Mobile Slide-Out Menu -->
     <div id="settings-menu">
         <div class="settings-content">
-            <h3 class="settings-title">Settings</h3>
+            <h3 class="settings-title" style="color:white;margin-bottom:20px;">Settings</h3>
             <div id="mobile-controls-target"></div>
         </div>
     </div>
@@ -524,18 +485,9 @@
         </div>
     </div>
 
-    <!-- Theory Manual Modal (Simplified to not waste tokens, identical to original) -->
-   
-
 <script>
 /**
  * FRACTAL ATLAS - MASTER EDITION
- * Architecture:
- * 1. Math Parser (String -> GLSL)
- * 2. WebGL GPU Renderer (Standard Fractals)
- * 3. CPU Progressive Renderer (Nebulae / Buddhabrot)
- * 4. App State Controller
- * 5. UI & Input Controller
  */
 
 // =======================================================
@@ -545,23 +497,19 @@ function parseEquation(eq) {
     let s = eq.replace(/\s+/g, ''); 
     let lower = s.toLowerCase();
     
-    // Convert math helpers into GLSL formatting
     let glsl = lower;
     glsl = glsl.replace(/\bconj\(/g, 'cconj(');
     glsl = glsl.replace(/\babs\(/g, 'cabs(');
     glsl = glsl.replace(/\bsin\(/g, 'csin(');
     glsl = glsl.replace(/\bcos\(/g, 'ccos(');
     
-    // Parse arbitrary Powers: match things like z^2, cabs(z)^2
     glsl = glsl.replace(/([a-z0-9_().]+)\^([0-9.]+)/g, (match, base, exp) => {
         let e = exp.includes('.') ? exp : exp + '.0';
-        if (e === '2.0') return `csqr(${base})`; // Optimized shortcut 
+        if (e === '2.0') return `csqr(${base})`;  
         return `cpow(${base}, ${e})`;
     });
 
-    // Set CPU Mode fallback logic mapping
-    app.state.p.eqMode = 0; // Default
-    
+    app.state.p.eqMode = 0; 
     if (lower === 'z^2+c' || glsl === 'csqr(z)+c') app.state.p.eqMode = 0;
     else if (lower === 'z^3+c' || glsl === 'cpow(z,3.0)+c') app.state.p.eqMode = 1;
     else if (lower === 'z^4+c' || glsl === 'cpow(z,4.0)+c') app.state.p.eqMode = 2;
@@ -570,24 +518,21 @@ function parseEquation(eq) {
     else if (lower === 'conj(z)^2+c' || glsl === 'csqr(cconj(z))+c') app.state.p.eqMode = 5;
     else if (lower === 'sin(z)+c' || glsl === 'csin(z)+c') app.state.p.eqMode = 6;
     else if (lower === 'cos(z)+c' || glsl === 'ccos(z)+c') app.state.p.eqMode = 7;
-    // Allow ternary overrides for custom piecewise strings
     else if (lower.includes('z.x>0.0?z^2+c:z^3+c') || lower.includes('z.x>0?z^2+c:z^3+c')) {
         app.state.p.eqMode = 9;
         glsl = 'z.x>0.0?csqr(z)+c:cpow(z,3.0)+c';
     }
     else if (lower.includes('0.25*(2.0+7.0*(z-cos(3.14159*z)))+c')) {
-        app.state.p.eqMode = 10; // Collatz
+        app.state.p.eqMode = 10; 
         glsl = '0.25*(vec2(2.0,0.0)+7.0*(z-ccos(3.14159*z)))+c';
     }
     else {
-        // Handle CPU mode generic math power detection fallback (z^7.5+c)
         let m = lower.match(/^z\^([0-9.]+)\+c$/);
         if(m) {
             app.state.p.eqMode = 8;
             app.state.p.customPow = parseFloat(m[1]);
         }
     }
-    
     return glsl;
 }
 
@@ -607,7 +552,6 @@ const GL_CORE = {
             precision mediump float;
             #endif
             
-            // Expanded Math Core
             vec2 cabs(vec2 z) { return abs(z); }
             vec2 cconj(vec2 z) { return vec2(z.x, -z.y); }
             vec2 csqr(vec2 z) { return vec2(z.x*z.x - z.y*z.y, 2.0*z.x*z.y); }
@@ -628,22 +572,34 @@ const GL_CORE = {
             
             vec3 palette(float t, int id) {
                 t = clamp(t, 0.0, 1.0);
-                if (id == 0) { 
+                if (id == 0) { // Magma
                     if(t < 0.33) return mix(vec3(0.0), vec3(0.8, 0.1, 0.1), t/0.33);
                     else if(t < 0.66) return mix(vec3(0.8, 0.1, 0.1), vec3(0.9, 0.6, 0.1), (t-0.33)/0.33);
                     else return mix(vec3(0.9, 0.6, 0.1), vec3(1.0, 1.0, 1.0), (t-0.66)/0.34);
                 } 
-                else if (id == 1) { 
+                else if (id == 1) { // Viridis
                     if(t < 0.33) return mix(vec3(0.26, 0.0, 0.33), vec3(0.18, 0.34, 0.56), t/0.33);
                     else if(t < 0.66) return mix(vec3(0.18, 0.34, 0.56), vec3(0.15, 0.68, 0.38), (t-0.33)/0.33);
                     else return mix(vec3(0.15, 0.68, 0.38), vec3(0.99, 0.9, 0.14), (t-0.66)/0.34);
                 } 
-                else if (id == 2) { 
+                else if (id == 2) { // Ice
                     return mix(mix(vec3(0.0, 0.1, 0.3), vec3(0.0, 0.8, 1.0), t*2.0), vec3(1.0), max(0.0, t*2.0 - 1.0));
                 } 
-                else { 
-                    return vec3(0.5) + vec3(0.5) * cos(6.28318 * (vec3(2.0)*t + vec3(0.5, 0.2, 0.25)));
-                }
+                
+                // Unified Cosine Palettes: a + b * cos( 6.28318 * (c * t + d) )
+                vec3 a = vec3(0.5);
+                vec3 b = vec3(0.5);
+                vec3 c = vec3(1.0);
+                vec3 d = vec3(0.0);
+                
+                if (id == 3) { c = vec3(2.0); d = vec3(0.5, 0.2, 0.25); } // Electric
+                else if (id == 4) { d = vec3(0.26, 0.41, 0.55); } // Neon Sunrise
+                else if (id == 5) { d = vec3(0.0, 0.10, 0.20); } // Midnight Deep
+                else if (id == 6) { d = vec3(0.3, 0.2, 0.2); } // Aurora
+                else if (id == 7) { c = vec3(1.0, 0.7, 0.4); d = vec3(0.0, 0.15, 0.20); } // Cyberpunk
+                else if (id == 8) { d = vec3(0.0, 0.33, 0.67); } // Nebula Rainbow
+                
+                return a + b * cos(6.28318 * (c * t + d));
             }
         `;
 
@@ -1165,7 +1121,6 @@ const app = {
                 ctx.cvs.width = w; ctx.cvs.height = h;
                 ctx.reset();
                 
-                // Nebula sample allocation per CPU
                 let samples = parseFloat(document.getElementById('save-samples').value) || 10;
                 let batchCount = Math.floor((samples * 1000000) / 30000);
                 if (batchCount < 1) batchCount = 1;
@@ -1176,7 +1131,6 @@ const app = {
 
                 let currentBatch = 0;
                 
-                // Async processing loop so the UI remains active
                 const renderStep = () => {
                     const stepSize = Math.min(20, batchCount - currentBatch);
                     for(let i=0; i<stepSize; i++) ctx.renderBatch(this.state, isRight);
@@ -1203,7 +1157,7 @@ const app = {
                 };
                 
                 requestAnimationFrame(renderStep);
-                return; // async control takeover
+                return; 
             } else {
                 targetCvs = isRight ? this.nebCtx[1].cvs : this.nebCtx[0].cvs;
                 const a = document.createElement('a');
@@ -1308,8 +1262,15 @@ const ui = {
             <div class="control-group" id="${prefix}grp-pal">
                 <label>Palette</label>
                 <select id="${prefix}sel-pal">
-                    <option value="0">Magma</option> <option value="1">Viridis</option>
-                    <option value="2">Ice</option> <option value="3">Electric</option>
+                    <option value="0">Magma</option>
+                    <option value="1">Viridis</option>
+                    <option value="2">Ice</option>
+                    <option value="3">Electric</option>
+                    <option value="4">Neon Sunrise</option>
+                    <option value="5">Midnight Deep</option>
+                    <option value="6">Aurora</option>
+                    <option value="7">Cyberpunk</option>
+                    <option value="8">Nebula Rainbow</option>
                 </select>
             </div>
             
@@ -1343,29 +1304,6 @@ const ui = {
             </div>
         </div>
     `,
-
-    rebindControls: function() {
-        // Re-run binding after bottom-controls innerHTML is replaced
-        const coreIds = ['iter','red','grn','blu','den','grid','zoom'];
-        coreIds.forEach(id => {
-            const sl = document.getElementById('sl-'+id);
-            const nb = document.getElementById('nb-'+id);
-            if (!sl || !nb) return;
-            [sl, nb].forEach(el => el.addEventListener('input', (e) => {
-                sl.value = e.target.value; nb.value = e.target.value;
-                app.updateParams(); app.triggerReset();
-            }));
-        });
-        const b1 = document.getElementById('btn-compile'); if(b1) b1.onclick = ()=>app.compile();
-        const b2 = document.getElementById('btn-reset');   if(b2) b2.onclick = ()=>app.resetPos();
-        const sp = document.getElementById('sel-preset');
-        if(sp) sp.addEventListener('change', ()=>{ document.getElementById('inp-eq').value=sp.value; app.compile(); });
-        const ip = document.getElementById('inp-eq');
-        if(ip) ip.addEventListener('input', ()=>app.updateParams());
-        const sp2 = document.getElementById('sel-pal');
-        if(sp2) sp2.addEventListener('change', ()=>{ app.updateParams(); app.triggerReset(); });
-        ui.updateControlsVisibility();
-    },
 
     init: function() {
         document.getElementById('bottom-controls').innerHTML = this.buildControls();
@@ -1523,7 +1461,6 @@ const ui = {
     updateCoords: () => document.getElementById('c-coords').innerText = `C: ${app.state.c.x.toFixed(4)}, ${app.state.c.y.toFixed(4)}`,
     
     toggleSettings: () => document.getElementById('settings-menu').classList.toggle('open'),
-    
 
     toggleModal: (show) => { 
         document.getElementById('save-modal').style.display = show ? 'flex' : 'none'; 
@@ -1565,24 +1502,17 @@ window.onload = () => app.init();
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════════════════════════
-// BIFURCATION 3D ENGINE
-// Axes: X = Re(c)   Y = Re(z) orbit values   Z = Im(c)
-// Controls live in #bif-toolbar (inside #bifurcation-view, always visible).
+// BIFURCATION 3D ENGINE (Async Builder)
 // ══════════════════════════════════════════════════════════════════════════
 const bif = (() => {
 
-    // ── State ─────────────────────────────────────────────────────────────
     let renderer, scene, camera, cloudMesh, planeMesh;
     let canvas, ready = false;
 
-    // Camera — pure orbital + pan
     const CAM = { th: 0.5, ph: 1.1, r: 7.5, px: 0, py: 0 };
     const TARGET = { x: -0.5, y: 0, z: 0 };
-
-    // Parameters — read directly from toolbar elements at build time
     let EQ = 0, CPOW = 2, PAL = 0, WARMUP = 200, ORBS = 100;
 
-    // ── Equation parser ───────────────────────────────────────────────────
     function parseEq(s) {
         s = s.replace(/\s+/g, '').toLowerCase();
         if (s === 'z^2+c')          return 0;
@@ -1595,10 +1525,9 @@ const bif = (() => {
         if (s === 'cos(z)+c')       return 7;
         const m = s.match(/^z\^([0-9.]+)\+c$/);
         if (m) { CPOW = parseFloat(m[1]); return 8; }
-        return 0; // fallback: Mandelbrot
+        return 0; 
     }
 
-    // ── Iterate map ───────────────────────────────────────────────────────
     function step(zx, zy, cr, ci) {
         let nx, ny;
         switch (EQ) {
@@ -1621,14 +1550,10 @@ const bif = (() => {
         const esc = isTrans ? 1e6 : 100;
 
         let zx = 0, zy = 0;
-        // Warmup: if it escapes here, c-value is unbounded — discard entirely
         for (let i = 0; i < wu; i++) {
             [zx, zy] = step(zx, zy, cr, ci);
             if (zx*zx + zy*zy > esc) return null;
         }
-        // Orbit collection: break on escape but KEEP what we have.
-        // Transcendental attractors near the stability edge may drift out slowly.
-        // Points with |y|>3 are already filtered in the caller so no smearing.
         const pts = [];
         for (let i = 0; i < ORBS; i++) {
             [zx, zy] = step(zx, zy, cr, ci);
@@ -1638,46 +1563,51 @@ const bif = (() => {
         return pts.length >= 3 ? pts : null;
     }
 
-    // ── Palette ───────────────────────────────────────────────────────────
+    // ── Unified Cosine Palette System ─────────────────────────────────────
     function lp(a, b, t) { return a + (b - a) * t; }
-    function hsl2rgb(h, s, l) {
-        const c = (1 - Math.abs(2*l - 1))*s, x = c*(1 - Math.abs((h*6)%2 - 1)), m = l - c/2;
-        let r=0,g=0,b=0;
-        if(h<1/6){r=c;g=x;}else if(h<2/6){r=x;g=c;}
-        else if(h<3/6){g=c;b=x;}else if(h<4/6){g=x;b=c;}
-        else if(h<5/6){r=x;b=c;}else{r=c;b=x;}
-        return [r+m, g+m, b+m];
-    }
-    function pal(t, id) {
-        t = Math.max(0, Math.min(1, t));
-        switch (id) {
-            case 0: // Magma: black → red → orange → white
-                if(t<.33) return [lp(0,.8,t/.33), lp(0,.1,t/.33), lp(0,.1,t/.33)];
-                if(t<.66) { const f=(t-.33)/.33; return [lp(.8,.9,f), lp(.1,.6,f), .1]; }
-                { const f=(t-.66)/.34; return [lp(.9,1,f), lp(.6,1,f), lp(.1,1,f)]; }
-            case 1: // Viridis
-                if(t<.33) { const f=t/.33; return [lp(.26,.18,f), lp(0,.34,f), lp(.33,.56,f)]; }
-                if(t<.66) { const f=(t-.33)/.33; return [lp(.18,.15,f), lp(.34,.68,f), lp(.56,.38,f)]; }
-                { const f=(t-.66)/.34; return [lp(.15,.99,f), lp(.68,.9,f), lp(.38,.14,f)]; }
-            case 2: // Ice
-                if(t<.5) return [0, lp(.1,.8,t*2), lp(.3,1,t*2)];
-                { const f=(t-.5)*2; return [f, lp(.8,1,f), 1]; }
-            case 3: // Electric
-                return [.5+.5*Math.cos(6.28*(2*t+.5)), .5+.5*Math.cos(6.28*(2*t+.2)), .5+.5*Math.cos(6.28*(2*t+.25))];
-            case 4: // Nebula Rainbow
-            default:
-                return hsl2rgb((1-t)*.75, 1, .45 + t*.2);
-        }
+    
+    function cosPal(t, c, d) {
+        // a + b * cos( 2*pi * (c*t + d) ); a=[.5,.5,.5], b=[.5,.5,.5]
+        return [
+            0.5 + 0.5 * Math.cos(6.28318 * (c[0] * t + d[0])),
+            0.5 + 0.5 * Math.cos(6.28318 * (c[1] * t + d[1])),
+            0.5 + 0.5 * Math.cos(6.28318 * (c[2] * t + d[2]))
+        ];
     }
 
-    // ── Geometry builders ─────────────────────────────────────────────────
-    // NO jitter on c — jitter destroys the fine bifurcation branches.
-    // Instead we use AdditiveBlending: overlapping points accumulate brightness,
-    // filling gaps naturally without corrupting the underlying math.
+    function pal(t, id) {
+        t = Math.max(0, Math.min(1, t));
+        if (id === 0) { // Magma
+            if(t<.33) return [lp(0,.8,t/.33), lp(0,.1,t/.33), lp(0,.1,t/.33)];
+            if(t<.66) { const f=(t-.33)/.33; return [lp(.8,.9,f), lp(.1,.6,f), .1]; }
+            { const f=(t-.66)/.34; return [lp(.9,1,f), lp(.6,1,f), lp(.1,1,f)]; }
+        }
+        if (id === 1) { // Viridis
+            if(t<.33) { const f=t/.33; return [lp(.26,.18,f), lp(0,.34,f), lp(.33,.56,f)]; }
+            if(t<.66) { const f=(t-.33)/.33; return [lp(.18,.15,f), lp(.34,.68,f), lp(.56,.38,f)]; }
+            { const f=(t-.66)/.34; return [lp(.15,.99,f), lp(.68,.9,f), lp(.38,.14,f)]; }
+        }
+        if (id === 2) { // Ice
+            if(t<.5) return [0, lp(.1,.8,t*2), lp(.3,1,t*2)];
+            { const f=(t-.5)*2; return [f, lp(.8,1,f), 1]; }
+        }
+        
+        // Match GLSL values exactly
+        if (id === 3) return cosPal(t, [2.0, 2.0, 2.0], [0.5, 0.20, 0.25]); // Electric
+        if (id === 4) return cosPal(t, [1.0, 1.0, 1.0], [0.26, 0.41, 0.55]); // Neon Sunrise
+        if (id === 5) return cosPal(t, [1.0, 1.0, 1.0], [0.0, 0.10, 0.20]); // Midnight Deep
+        if (id === 6) return cosPal(t, [1.0, 1.0, 1.0], [0.3, 0.20, 0.20]); // Aurora
+        if (id === 7) return cosPal(t, [1.0, 0.7, 0.4], [0.0, 0.15, 0.20]); // Cyberpunk
+        if (id === 8) return cosPal(t, [1.0, 1.0, 1.0], [0.0, 0.33, 0.67]); // Nebula Rainbow
+        
+        return cosPal(t, [1.0, 1.0, 1.0], [0.0, 0.33, 0.67]); // fallback
+    }
+
     const CR_MIN=-2.6, CR_MAX=1.4, CI_MIN=-1.6, CI_MAX=1.6;
     const MAX_F = 24_000_000;
 
-    function buildVolume() {
+    // ── ASYNC Volume Builder (Non-Blocking) ───────────────────────────────
+    async function buildVolumeAsync(progressCallback) {
         const NX = 900, NY = 420;
         const dCR = (CR_MAX-CR_MIN)/(NX-1);
         const dCI = (CI_MAX-CI_MIN)/(NY-1);
@@ -1685,6 +1615,7 @@ const bif = (() => {
 
         const isTrans = (EQ === 6 || EQ === 7);
         const kBright = isTrans ? 0.06 : 0.018;
+        
         for (let ix = 0; ix < NX && pos.length < MAX_F; ix++) {
             const cr = CR_MIN + ix * dCR;
             for (let iy = 0; iy < NY; iy++) {
@@ -1701,12 +1632,16 @@ const bif = (() => {
                     col.push(R * kBright, G * kBright, B * kBright);
                 }
             }
+            // Yield to main thread every 15 rows to keep UI responsive
+            if (ix % 15 === 0) {
+                progressCallback(Math.floor((ix / NX) * 100));
+                await new Promise(r => requestAnimationFrame(r));
+            }
         }
         return { pos: new Float32Array(pos), col: new Float32Array(col) };
     }
 
     function buildRealPlane() {
-        // Classic 1D bifurcation at ci=0, light gray, additive so it glows bright.
         const N = 1400;
         const dCR = (CR_MAX-CR_MIN)/(N-1);
         const pos = [], col = [];
@@ -1718,7 +1653,8 @@ const bif = (() => {
                 const y = pts[k];
                 if (Math.abs(y) > 3.0) continue;
                 pos.push(cr, y, 0);
-                col.push(0.032, 0.032, 0.032);
+                // Significantly brightened real plane
+                col.push(0.85, 0.85, 0.85);
             }
         }
         return { pos: new Float32Array(pos), col: new Float32Array(col) };
@@ -1739,28 +1675,35 @@ const bif = (() => {
         }));
     }
 
-    // ── Camera math ───────────────────────────────────────────────────────
     function applyCam() {
         const x = CAM.r*Math.sin(CAM.ph)*Math.sin(CAM.th);
         const y = CAM.r*Math.cos(CAM.ph);
         const z = CAM.r*Math.sin(CAM.ph)*Math.cos(CAM.th);
-        // Pan offsets are in camera-right and camera-up directions
-        // Right vector = cross(forward, worldUp) normalised
-        const fx = TARGET.x - (x + TARGET.x), fz = TARGET.z - (z + TARGET.z); // nope — simpler:
         camera.position.set(x + TARGET.x + CAM.px, y + TARGET.y + CAM.py, z + TARGET.z);
         camera.lookAt(TARGET.x + CAM.px, TARGET.y + CAM.py, TARGET.z);
     }
 
-    // ── Rebuild ───────────────────────────────────────────────────────────
-    function rebuild() {
-        if (!scene) return; // not initialised yet
+    // ── ASYNC Rebuild ─────────────────────────────────────────────────────
+    let isBuilding = false;
+
+    async function rebuild() {
+        if (!scene || isBuilding) return; 
+        isBuilding = true;
+
+        const btn = document.getElementById('bif-rebuild');
+        if (btn) { btn.innerText = "BUILDING... 0%"; btn.disabled = true; }
+
         if (cloudMesh) { scene.remove(cloudMesh); cloudMesh.geometry.dispose(); cloudMesh.material.dispose(); cloudMesh = null; }
         if (planeMesh) { scene.remove(planeMesh); planeMesh.geometry.dispose(); planeMesh.material.dispose(); planeMesh = null; }
 
         const ptSz = Math.max(0.018, 0.036 * (CAM.r / 7.5));
 
-        const vd = buildVolume();
-        cloudMesh = mkCloud(vd, ptSz, true);   // additive — gaps fill via brightness accumulation
+        // Wait for async background builder
+        const vd = await buildVolumeAsync((pct) => {
+            if (btn) btn.innerText = `BUILDING... ${pct}%`;
+        });
+        
+        cloudMesh = mkCloud(vd, ptSz, true);   
         scene.add(cloudMesh);
 
         const planeChk = document.getElementById('bif-plane');
@@ -1769,9 +1712,11 @@ const bif = (() => {
             planeMesh = mkCloud(pd, ptSz * 1.3, false, 0.72);
             scene.add(planeMesh);
         }
+
+        if (btn) { btn.innerText = "REBUILD"; btn.disabled = false; }
+        isBuilding = false;
     }
 
-    // ── Render loop ───────────────────────────────────────────────────────
     function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); }
 
     function onResize() {
@@ -1782,11 +1727,9 @@ const bif = (() => {
         camera.updateProjectionMatrix();
     }
 
-    // ── Input ─────────────────────────────────────────────────────────────
     const drag = { on: false, lx: 0, ly: 0 };
 
     function bindInput() {
-        // Mouse
         canvas.addEventListener('mousedown', e => {
             drag.on = true; drag.lx = e.clientX; drag.ly = e.clientY;
             e.preventDefault();
@@ -1797,9 +1740,7 @@ const bif = (() => {
             drag.lx = e.clientX; drag.ly = e.clientY;
 
             if (e.shiftKey) {
-                // Pan in screen-space: move target perpendicular to view direction
                 const sp = 0.0025 * CAM.r;
-                // Right = rotate theta+90, Up = fixed Y
                 const rx = Math.cos(CAM.th), rz = -Math.sin(CAM.th);
                 TARGET.x -= rx * dx * sp;
                 TARGET.z -= rz * dx * sp;
@@ -1818,7 +1759,6 @@ const bif = (() => {
             applyCam();
         }, { passive: false });
 
-        // Touch
         let td = 0, tt = [];
         canvas.addEventListener('touchstart', e => {
             e.preventDefault();
@@ -1844,7 +1784,6 @@ const bif = (() => {
         window.addEventListener('resize', onResize);
     }
 
-    // ── Axis labels ───────────────────────────────────────────────────────
     function mkLabel(txt, pos, color) {
         const c = document.createElement('canvas'); c.width = 256; c.height = 64;
         const x = c.getContext('2d');
@@ -1856,7 +1795,6 @@ const bif = (() => {
         return sp;
     }
 
-    // ── Toolbar wiring ────────────────────────────────────────────────────
     function bindToolbar() {
         const preset = document.getElementById('bif-preset');
         const eqIn   = document.getElementById('bif-eq');
@@ -1896,7 +1834,6 @@ const bif = (() => {
         if (reb) reb.addEventListener('click', rebuild);
     }
 
-    // ── Public init ───────────────────────────────────────────────────────
     return {
         init() {
             canvas = document.getElementById('bif-canvas');
@@ -1914,7 +1851,6 @@ const bif = (() => {
             camera = new THREE.PerspectiveCamera(50, W/H, 0.01, 200);
             applyCam();
 
-            // Axis lines
             const axM = new THREE.LineBasicMaterial({ color: 0x1e1e1e });
             const mkAx = (a, b) => {
                 const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(...a), new THREE.Vector3(...b)]);
@@ -1936,10 +1872,6 @@ const bif = (() => {
     };
 })();
 </script>
-
-
-
-
 
 </body>
 </html>
