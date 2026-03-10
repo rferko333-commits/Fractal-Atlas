@@ -323,8 +323,9 @@
 
     <!-- HEADER -->
     <header>
-        <div class="header-left">
-            <select class="manual-select" onchange="if(this.value) window.open(this.value, '_blank'); this.selectedIndex=0;">
+        <div class="header-left" style="gap: 5px;">
+            <button class="action-btn" onclick="ui.toggleManual()" style="padding: 8px 12px; font-size: 11px; margin: 0;">📖 Guide</button>
+            <select class="manual-select" style="margin: 0;" onchange="if(this.value) window.open(this.value, '_blank'); this.selectedIndex=0;">
                 <option value="" disabled selected>📖 Read Theory</option>
                 <option value="https://ryanferko.substack.com/p/reality-fractal-simplified">Reality Fractal - Simplified</option>
                 <option value="https://ryanferko.substack.com/p/reality-fractals-dynamics">Reality Fractal's Dynamics</option>
@@ -338,7 +339,6 @@
         </div>
         <div class="header-right">
             <button class="action-btn" onclick="ui.toggleModal(true)">SAVE VIEW</button>
-            <button class="icon-btn" onclick="ui.toggleManual()" title="User Manual" style="color: #ff4444; font-size: 22px; font-weight: bold; margin-right: 5px;">❓</button>
             <button class="icon-btn" onclick="ui.toggleSettings()" title="Settings">⚙️</button>
         </div>
     </header>
@@ -1997,18 +1997,20 @@ const bif = (() => {
         seedMarker.scale.set(scale, scale, scale);
         seedMarker.position.set(bifSeed.x, 0.01, bifSeed.y);
 
-        let cx = isJulia ? app.state.c.x : bifSeed.x;
-        let cy = isJulia ? app.state.c.y : bifSeed.y;
-        let z0x = isJulia ? bifSeed.x : 0;
-        let z0y = isJulia ? bifSeed.y : 0;
+        let ox = bifSeed.x;
+        let oz = bifSeed.y;
+        let cx = isJulia ? app.state.c.x : ox;
+        let cy = isJulia ? app.state.c.y : oz;
+        let z0x = isJulia ? ox : 0;
+        let z0y = isJulia ? oz : 0;
 
         const pos = orbitLine.geometry.attributes.position.array;
         let idx = 0;
         
         for (let i = 0; i < 300; i++) {
+            pos[idx++] = ox;
             pos[idx++] = z0x;
-            pos[idx++] = i * 0.015;
-            pos[idx++] = z0y;
+            pos[idx++] = oz;
             
             step(z0x, z0y, cx, cy);
             z0x = NEXT_X; z0y = NEXT_Y;
@@ -2335,7 +2337,7 @@ const bif = (() => {
             scene.add(mkAx([0, -2.8, 0], [0, 2.8, 0]));
             scene.add(mkAx([0, 0, -3.0], [0, 0, 3.0]));
             
-            let labelY = mkLabel('Iteration (Time)', [0, 3.1, 0], '#dddddd');
+            let labelY = mkLabel('Real(z)', [0, 3.1, 0], '#dddddd');
             scene.add(labelY);
             updateLabels(); 
 
@@ -2391,4 +2393,3 @@ const bif = (() => {
 
 </body>
 </html>
-```
