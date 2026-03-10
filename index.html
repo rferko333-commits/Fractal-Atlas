@@ -358,7 +358,7 @@
 
     <!-- BIFURCATION 3D VIEW -->
     <div id="bifurcation-view">
-        <div id="bif-hint">Scroll to zoom · Right/Middle click to pan · Drag Seed to move orbits</div>
+        <div id="bif-hint">Drag to rotate · Scroll to zoom · Middle/Right/Shift+drag to pan · Drag Seed to move orbits</div>
         <canvas id="bif-canvas"></canvas>
         <div id="bif-toolbar">
             <div class="ctrl-grid">
@@ -954,6 +954,16 @@ class NebulaRenderer {
             }
         }
         this.ctx.putImageData(this.imgData, 0, 0);
+
+        // Restored: Draw seed marker for Nebula tab
+        if(!isRight && state.mode !== 2) {
+            const sx = ((state.c.x - (cam.x - vw/2)) / vw) * w;
+            const sy = h - ((state.c.y - (cam.y - vh/2)) / vh) * h;
+            this.ctx.beginPath();
+            this.ctx.arc(sx, sy, 5, 0, Math.PI*2);
+            this.ctx.fillStyle = 'white'; this.ctx.fill();
+            this.ctx.lineWidth = 2; this.ctx.strokeStyle = 'black'; this.ctx.stroke();
+        }
     }
 }
 
@@ -1327,19 +1337,19 @@ const ui = {
             </div>
             
             <div class="control-group hidden" id="${prefix}grp-nebula">
-                <label class="lbl-red">Red Threshold</label>
+                <label style="color:#ff6b6b;">Red Threshold</label>
                 <div class="hybrid-input" style="margin-bottom:8px">
                     <input type="range" id="${prefix}sl-red" min="0" max="2000" value="200">
                     <input type="number" id="${prefix}nb-red" value="200">
                 </div>
                 
-                <label class="lbl-green">Green Threshold</label>
+                <label style="color:#51cf66;">Green Threshold</label>
                 <div class="hybrid-input" style="margin-bottom:8px">
                     <input type="range" id="${prefix}sl-grn" min="0" max="2000" value="100">
                     <input type="number" id="${prefix}nb-grn" value="100">
                 </div>
                 
-                <label class="lbl-blue">Blue Threshold</label>
+                <label style="color:#339af0;">Blue Threshold</label>
                 <div class="hybrid-input">
                     <input type="range" id="${prefix}sl-blu" min="0" max="2000" value="50">
                     <input type="number" id="${prefix}nb-blu" value="50">
@@ -1916,7 +1926,7 @@ const bif = (() => {
     }
     
     function updateDynamicOrbit() {
-        if (!orbitLine) return;
+        if (!orbitLine || !app.state.showOrbit) return;
         
         const scale = Math.max(0.5, CAM.r * 0.15);
         seedMarker.scale.set(scale, scale, scale);
@@ -1932,10 +1942,11 @@ const bif = (() => {
         const pos = orbitLine.geometry.attributes.position.array;
         let idx = 0;
         
+        // 3D Tornado Path: X = Real(z_n), Z = Imag(z_n), Y = Iteration
         for (let i = 0; i < 300; i++) {
-            pos[idx++] = ox;
             pos[idx++] = z0x;
-            pos[idx++] = oz;
+            pos[idx++] = i * 0.015;
+            pos[idx++] = z0y;
             
             step(z0x, z0y, cx, cy);
             z0x = NEXT_X; z0y = NEXT_Y;
@@ -1974,8 +1985,6 @@ const bif = (() => {
             scene.add(planeMesh);
         }
         
-        updateDynamicOrbit();
-
         if (btn) { btn.innerText = "REBUILD"; btn.disabled = false; }
         isBuilding = false;
     }
@@ -2214,6 +2223,7 @@ const bif = (() => {
                 const c2 = document.getElementById('menu-cb-orbit');
                 if (c1) c1.checked = val;
                 if (c2) c2.checked = val;
+                updateDynamicOrbit();
             });
         }
 
