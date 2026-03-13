@@ -993,9 +993,9 @@ class NebulaRenderer {
                     }
                     if(px>=0 && px<w && py>=0 && py<h) {
                         let idx = ((h - 1 - py) * w + px) * 3; 
-                        if(step > p.r) this.hist[idx] += glow; 
-                        if(step > p.g) this.hist[idx+1] += glow; 
-                        if(step > p.b) this.hist[idx+2] += glow; 
+                        if(step <= p.r) this.hist[idx] += glow; 
+                        if(step <= p.g) this.hist[idx+1] += glow; 
+                        if(step <= p.b) this.hist[idx+2] += glow; 
                     }
                 }
             }
@@ -1471,9 +1471,9 @@ const app = {
                                 }
                                 if(px>=0 && px<w && py>=0 && py<h) {
                                     let idx = ((h - 1 - py) * w + px) * 3; 
-                                    if(step > p.r) hist[idx] += glow; 
-                                    if(step > p.g) hist[idx+1] += glow; 
-                                    if(step > p.b) hist[idx+2] += glow; 
+                                    if(step <= p.r) hist[idx] += glow; 
+                                    if(step <= p.g) hist[idx+1] += glow; 
+                                    if(step <= p.b) hist[idx+2] += glow; 
                                 }
                             }
                         }
