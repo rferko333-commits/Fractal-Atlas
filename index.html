@@ -1371,7 +1371,9 @@ const app = {
 
         const view = document.getElementById('save-view').value;
         const isRight = (view === 'right');
-        const if(useCpuEngine) {
+        const useCpuEngine = (this.state.mode === 1) || (this.state.mode === 2 && isRight); 
+        
+        if(useCpuEngine) {
             if (resChoice !== '1') {
                 this.state.saving = true;
                 const ctx = isRight ? this.nebCtx[1] : this.nebCtx[0];
