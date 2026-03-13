@@ -1526,7 +1526,11 @@ const app = {
                                 
                                 // Color processing natively on main thread once all CPU tasks are gathered
                                 const baseGain = isRight ? 20.0 : 800.0;
-                                const scale = (selfApp.state.p.den * baseGain) / Math.max(1, totalSamples / 30000);
+                                
+                                // Compensate for points spreading out over a much larger 4K canvas
+                                const areaCorrection = (targetW * targetH) / Math.max(1, oldW * oldH);
+                                const scale = (selfApp.state.p.den * baseGain * areaCorrection) / Math.max(1, totalSamples / 30000);
+                                
                                 const norm = 1.0 / (Math.log1p(baseGain) || 1.0);
                                 
                                 const imgData = ctx.ctx.createImageData(targetW, targetH);
