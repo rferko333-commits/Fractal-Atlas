@@ -976,10 +976,10 @@ class NebulaRenderer {
             }
             
             let shouldPlot = isAnti ? (!esc && step === max_i) : (esc && step > 0);
-
-            if(shouldPlot) {
-                let glow = isAnti ? 0.02 : Math.exp(-d_min * 10.0); 
-                for(let s=0; s<step; s++) {
+                        if(shouldPlot) {
+                            // Removing the exponential 'fog' to make points sharp and translucent
+                            let glow = isAnti ? 0.02 : 1.0; 
+                            for(let s=0; s<step; s++) {
                     let px, py;
                     if (isNebulaAtlas && p.atlasMode === 0) {
                         let tileSize = 4.0 / grid;
@@ -1046,13 +1046,14 @@ class NebulaRenderer {
             }
 
             if (isGrid) {
-                data[j++] = 30; data[j++] = 30; data[j++] = 30; data[j++] = 255;
-            } else {
-                data[j++] = Math.min(255, Math.pow(r, 1.2) * 255);
-                data[j++] = Math.min(255, Math.pow(g, 1.2) * 255);
-                data[j++] = Math.min(255, Math.pow(b, 1.2) * 255);
-                data[j++] = 255;
-            }
+                                        data[j++] = 30; data[j++] = 30; data[j++] = 30; data[j++] = 255;
+                                    } else {
+                                        // Higher Gamma (2.2) and Gain (400) creates the 'Luminous' glowing look
+                                        data[j++] = Math.min(255, Math.pow(r, 2.2) * 400);
+                                        data[j++] = Math.min(255, Math.pow(g, 2.2) * 400);
+                                        data[j++] = Math.min(255, Math.pow(b, 2.2) * 400);
+                                        data[j++] = 255;
+                                    }
         }
         this.ctx.putImageData(this.imgData, 0, 0);
 
@@ -1456,7 +1457,8 @@ const app = {
                         
                         let shouldPlot = isAnti ? (!esc && step === max_i) : (esc && step > 0);
                         if(shouldPlot) {
-                            let glow = isAnti ? 0.02 : Math.exp(-d_min * 10.0); 
+                            // Removing the exponential 'fog' to make points sharp and translucent
+                            let glow = isAnti ? 0.02 : 1.0; 
                             for(let s=0; s<step; s++) {
                                 let px, py;
                                 if (isNebulaAtlas && p.atlasMode === 0) {
@@ -1564,9 +1566,10 @@ const app = {
                                     if (isGrid) {
                                         data[j++] = 30; data[j++] = 30; data[j++] = 30; data[j++] = 255;
                                     } else {
-                                        data[j++] = Math.min(255, Math.pow(r, 1.2) * 255);
-                                        data[j++] = Math.min(255, Math.pow(g, 1.2) * 255);
-                                        data[j++] = Math.min(255, Math.pow(b, 1.2) * 255);
+                                        // Higher Gamma (2.2) and Gain (400) creates the 'Luminous' glowing look
+                                        data[j++] = Math.min(255, Math.pow(r, 2.2) * 400);
+                                        data[j++] = Math.min(255, Math.pow(g, 2.2) * 400);
+                                        data[j++] = Math.min(255, Math.pow(b, 2.2) * 400);
                                         data[j++] = 255;
                                     }
                                 }
