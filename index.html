@@ -1570,19 +1570,8 @@ const app = {
                                         data[j++] = 255;
                                     }
                                 }
-                                tempCtx.putImageData(imgData, 0, 0);
-
-                                if(!isRight && selfApp.state.mode !== 2) {
-                                    const sx = ((selfApp.state.c.x - (cam.x - vw/2)) / vw) * targetW;
-                                    const sy = targetH - ((selfApp.state.c.y - (cam.y - vh/2)) / vh) * targetH;
-                                    tempCtx.beginPath();
-                                    // Scale the white dot so it isn't tiny at 4K
-                                    const dotRadius = Math.max(5, targetW * 0.003);
-                                    tempCtx.arc(sx, sy, dotRadius, 0, Math.PI*2);
-                                    tempCtx.fillStyle = 'white'; tempCtx.fill();
-                                    tempCtx.lineWidth = Math.max(2, targetW * 0.001); 
-                                    tempCtx.strokeStyle = 'black'; tempCtx.stroke();
                                 }
+                                tempCtx.putImageData(imgData, 0, 0);
 
                                 const a = document.createElement('a');
                                 a.download = `${fName}.png`;
@@ -1590,7 +1579,6 @@ const app = {
                                 a.click();
                                 
                                 selfApp.state.saving = false;
-                                
                                 btn.innerText = "Download";
                                 btn.disabled = false;
                                 ui.toggleModal(false);
