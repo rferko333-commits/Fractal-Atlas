@@ -1379,9 +1379,6 @@ const app = {
                 const ctx = isRight ? this.nebCtx[1] : this.nebCtx[0];
                 const oldW = ctx.cvs.width, oldH = ctx.cvs.height;
                 
-                ctx.cvs.width = targetW; ctx.cvs.height = targetH;
-                ctx.reset();
-                
                 let samplesMillions = parseFloat(document.getElementById('save-samples').value) || 10;
                 let totalSamples = samplesMillions * 1000000;
 
@@ -1532,8 +1529,12 @@ const app = {
                                 const scale = (selfApp.state.p.den * baseGain * areaCorrection) / Math.max(1, totalSamples / 30000);
                                 
                                 const norm = 1.0 / (Math.log1p(baseGain) || 1.0);
+                                // Create an off-screen canvas so we don't mess with the live DOM canvas
+                                const tempCanvas = document.createElement('canvas');
+                                tempCanvas.width = targetW; tempCanvas.height = targetH;
+                                const tempCtx = tempCanvas.getContext('2d');
                                 
-                                const imgData = ctx.ctx.createImageData(targetW, targetH);
+                                const imgData = tempCtx.createImageData(targetW, targetH);
                                 const data = imgData.data;
                                 const p = selfApp.state.p;
                                 const grid = p.grid;
@@ -1569,24 +1570,27 @@ const app = {
                                         data[j++] = 255;
                                     }
                                 }
-                                ctx.ctx.putImageData(imgData, 0, 0);
+                                tempCtx.putImageData(imgData, 0, 0);
 
                                 if(!isRight && selfApp.state.mode !== 2) {
                                     const sx = ((selfApp.state.c.x - (cam.x - vw/2)) / vw) * targetW;
                                     const sy = targetH - ((selfApp.state.c.y - (cam.y - vh/2)) / vh) * targetH;
-                                    ctx.ctx.beginPath();
-                                    ctx.ctx.arc(sx, sy, 5, 0, Math.PI*2);
-                                    ctx.ctx.fillStyle = 'white'; ctx.ctx.fill();
-                                    ctx.ctx.lineWidth = 2; ctx.ctx.strokeStyle = 'black'; ctx.ctx.stroke();
+                                    tempCtx.beginPath();
+                                    // Scale the white dot so it isn't tiny at 4K
+                                    const dotRadius = Math.max(5, targetW * 0.003);
+                                    tempCtx.arc(sx, sy, dotRadius, 0, Math.PI*2);
+                                    tempCtx.fillStyle = 'white'; tempCtx.fill();
+                                    tempCtx.lineWidth = Math.max(2, targetW * 0.001); 
+                                    tempCtx.strokeStyle = 'black'; tempCtx.stroke();
                                 }
 
                                 const a = document.createElement('a');
                                 a.download = `${fName}.png`;
-                                a.href = stampSignature(ctx.cvs).toDataURL('image/png');
+                                a.href = stampSignature(tempCanvas).toDataURL('image/png');
                                 a.click();
                                 
-                                ctx.cvs.width = oldW; ctx.cvs.height = oldH;
                                 selfApp.state.saving = false;
+                                
                                 btn.innerText = "Download";
                                 btn.disabled = false;
                                 ui.toggleModal(false);
