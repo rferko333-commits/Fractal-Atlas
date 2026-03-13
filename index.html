@@ -1570,7 +1570,7 @@ const app = {
                                         data[j++] = 255;
                                     }
                                 }
-                                }
+                                
                                 tempCtx.putImageData(imgData, 0, 0);
 
                                 const a = document.createElement('a');
@@ -1584,7 +1584,7 @@ const app = {
                                 ui.toggleModal(false);
                                 ui.showSharePrompt();
                                 selfApp.triggerReset();
-                            
+                            }
                         }  
                     };
                 }
