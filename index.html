@@ -866,7 +866,8 @@ class NebulaRenderer {
         this.frames = 0;
     }
 
-    renderBatch(state, isRight) {
+   // ... existing code ...
+    renderBatch(state, isRight, timeBudget = 0) {
         if (!this.hist) return;
         const w = this.cvs.width;
         const h = this.cvs.height;
@@ -877,7 +878,7 @@ class NebulaRenderer {
         const minX = cam.x - vw/2;
         const minY = cam.y - vh/2;
         
-        const batch = 30000; 
+        let batch = timeBudget > 0 ? 5000000 : 30000; 
         const p = state.p;
         const max_i = p.iter;
         const trX = new Float32Array(max_i);
@@ -889,8 +890,13 @@ class NebulaRenderer {
         const cp = p.customPow;
         const isAnti = state.anti && state.mode === 1;
 
-        this.frames++;
+        const tStart = performance.now();
+        let ptsProcessed = 0;
 
+        for(let i=0; i<batch; i++) {
+            ptsProcessed++;
+            let cr, ci, zx, zy, cellX, cellY;
+// ... existing code ...
         for(let i=0; i<batch; i++) {
             let cr, ci, zx, zy, cellX, cellY;
             
@@ -997,6 +1003,28 @@ class NebulaRenderer {
                     }
                 }
             }
+            // ... existing code ...
+                    if(px>=0 && px<w && py>=0 && py<h) {
+                        let idx = ((h - 1 - py) * w + px) * 3; 
+                        if(step > p.r) this.hist[idx] += glow; 
+                        if(step > p.g) this.hist[idx+1] += glow; 
+                        if(step > p.b) this.hist[idx+2] += glow; 
+                    }
+                }
+            }
+            
+            // Check time budget every 4000 iterations to avoid expensive time lookups
+            if (timeBudget > 0 && ptsProcessed % 4000 === 0) {
+                if (performance.now() - tStart > timeBudget) break;
+            }
+        }
+        
+        // Increase the frame counter precisely by the amount of work completed
+        this.frames += (ptsProcessed / 30000);
+        
+        const data = this.imgData.data;
+        const len = w * h * 3;
+// ... existing code ...
         }
         
         const data = this.imgData.data;
@@ -1239,11 +1267,13 @@ const app = {
                 }
 
             } else if (this.state.mode === 1) {
-                this.nebCtx[0].renderBatch(this.state, false);
-                this.nebCtx[1].renderBatch(this.state, true);
+                // Target ~12ms per window (~40 FPS overall) for maximizing processing
+                this.nebCtx[0].renderBatch(this.state, false, 12);
+                this.nebCtx[1].renderBatch(this.state, true, 12);
             } else if (this.state.mode === 2) {
                 GL_CORE.render(this.glCtx[0], this.state, false);
-                this.nebCtx[1].renderBatch(this.state, true);
+                // Target ~20ms since the left WebGL window renders extremely fast
+                this.nebCtx[1].renderBatch(this.state, true, 20);
             }
         }
         
