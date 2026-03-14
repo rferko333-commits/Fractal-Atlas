@@ -719,6 +719,10 @@ const GL_CORE = {
             uniform float u_iter;
             uniform float u_grid;
             uniform int u_pal;
+            
+            uniform bool u_deep;
+            uniform int u_eq_mode;
+            uniform vec2 u_ref[600];
 
             void main() {
                 vec2 uv = (gl_FragCoord.xy - 0.5 * u_res) / u_res.y;
@@ -742,12 +746,30 @@ const GL_CORE = {
                 float iter = 0.0;
                 float m = 0.0;
                 
-                for (int i = 0; i < 10000; i++) {
-                    if (float(i) > u_iter) break;
-                    z = {{EQ}}; 
-                    m = dot(z,z);
-                    if (m > 100.0) break;
-                    iter += 1.0;
+                if (u_deep && u_mode == 0 && u_view == 0 && u_eq_mode == 0) {
+                    vec2 dZ = vec2(0.0);
+                    vec2 dC = uv / u_zoom;
+                    for(int i=0; i<600; i++) {
+                        if (float(i) > u_iter) break;
+                        vec2 Z_ref = u_ref[i];
+                        vec2 n_dZ = vec2(
+                            2.0 * (Z_ref.x * dZ.x - Z_ref.y * dZ.y) + dZ.x * dZ.x - dZ.y * dZ.y + dC.x,
+                            2.0 * (Z_ref.x * dZ.y + Z_ref.y * dZ.x) + 2.0 * dZ.x * dZ.y + dC.y
+                        );
+                        dZ = n_dZ;
+                        vec2 Z = Z_ref + dZ;
+                        m = dot(Z, Z);
+                        if (m > 100.0) break;
+                        iter += 1.0;
+                    }
+                } else {
+                    for (int i = 0; i < 10000; i++) {
+                        if (float(i) > u_iter) break;
+                        z = {{EQ}}; 
+                        m = dot(z,z);
+                        if (m > 100.0) break;
+                        iter += 1.0;
+                    }
                 }
 
                 vec3 col = vec3(0.0);
@@ -838,6 +860,22 @@ const GL_CORE = {
         ui('u_mode', state.mode);
         ui('u_view', isRight ? 1 : 0);
         ui('u_pal', state.p.pal);
+        
+        const isDeep = state.left.z > 2000000 && state.p.eqMode === 0;
+        ui('u_deep', isDeep ? 1 : 0);
+        ui('u_eq_mode', state.p.eqMode);
+
+        if (isDeep && !isRight && state.mode === 0) {
+            let ref = new Float32Array(1200);
+            let zx = 0, zy = 0;
+            for(let i=0; i<600; i++) {
+                ref[i*2] = zx; ref[i*2+1] = zy;
+                let nx = zx*zx - zy*zy + cam.x;
+                let ny = 2*zx*zy + cam.y;
+                zx = nx; zy = ny;
+            }
+            gl.uniform2fv(gl.getUniformLocation(prog, 'u_ref'), ref);
+        }
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -1256,7 +1294,19 @@ const app = {
         }
         
         const maxZ = Math.max(this.state.left.z, this.state.right.z);
-        document.getElementById('zoom-warning').style.display = (maxZ > 5000000 && this.state.mode !== 1) ? 'block' : 'none';
+        const warnTag = document.getElementById('zoom-warning');
+        
+        if (this.state.left.z > 2000000 && this.state.p.eqMode === 0 && this.state.mode === 0) {
+            warnTag.style.display = 'block';
+            warnTag.innerText = "🚀 DEEP ZOOM MODE ENABLED (PT & Series Approx Engine Active)";
+            warnTag.className = "info-tag tag-lock"; // turns it green
+        } else if (maxZ > 2000000 && this.state.mode !== 1) {
+            warnTag.style.display = 'block';
+            warnTag.innerText = "⚠️ GPU LIMIT REACHED. SWITCH TO Z² EQUATION OR NEBULAE FOR DEEP ZOOM.";
+            warnTag.className = "info-tag tag-warn"; // turns it red
+        } else {
+            warnTag.style.display = 'none';
+        }
         
         // Auto-zoom tick — runs every frame, no user interaction needed
         if (this.state.autoZoom && (this.state.mode === 0 || this.state.mode === 2)) {
@@ -1660,6 +1710,15 @@ const ui = {
                 </div>
             </div>
             
+            <div class="control-group">
+                <label>Share / Load Location</label>
+                <div style="display:flex; gap: 5px;">
+                    <input type="text" id="${prefix}inp-loc" placeholder="Paste coords..." style="flex:1; background:#222; color:white; border:1px solid #444; padding:8px; font-size:11px;" onclick="this.select()">
+                    <button class="action-btn" id="${prefix}btn-loc-load" style="width:auto; padding:8px;">LOAD</button>
+                    <button class="action-btn btn-primary" id="${prefix}btn-loc-copy" style="width:auto; padding:8px;">COPY</button>
+                </div>
+            </div>
+            
             <div class="control-group hidden" id="${prefix}grp-nebula">
                 <label style="color:#ff6b6b;">Red Threshold</label>
                 <div class="hybrid-input" style="margin-bottom:8px">
@@ -1824,6 +1883,38 @@ const ui = {
         };
         bindBtn('btn-compile', () => app.compile());
         bindBtn('btn-reset', () => app.resetPos());
+        
+        const updateLocUI = () => {
+            let str = `${app.state.c.x.toFixed(6)},${app.state.c.y.toFixed(6)},${app.state.left.x.toFixed(10)},${app.state.left.y.toFixed(10)},${app.state.left.z.toFixed(2)}`;
+            if(document.getElementById('inp-loc')) document.getElementById('inp-loc').value = str;
+            if(document.getElementById('menu-inp-loc')) document.getElementById('menu-inp-loc').value = str;
+        };
+        window.addEventListener('mouseup', updateLocUI);
+        window.addEventListener('touchend', updateLocUI);
+        window.addEventListener('wheel', updateLocUI);
+        updateLocUI();
+        
+        const loadLoc = (id) => {
+            let el = document.getElementById(id);
+            if(!el) return;
+            let p = el.value.split(',');
+            if(p.length >= 5) {
+                app.state.c.x = parseFloat(p[0]); app.state.c.y = parseFloat(p[1]);
+                app.state.left.x = parseFloat(p[2]); app.state.left.y = parseFloat(p[3]);
+                app.state.left.z = parseFloat(p[4]); app.state.right.z = app.state.left.z;
+                ui.updateCoords(); app.triggerReset(); updateLocUI();
+            }
+        };
+        const copyLoc = (id) => {
+            let el = document.getElementById(id);
+            if(!el) return;
+            el.select(); document.execCommand('copy');
+            el.value = "COPIED!"; setTimeout(updateLocUI, 1000);
+        };
+        bindBtn('btn-loc-load', () => loadLoc('inp-loc'));
+        bindBtn('btn-loc-copy', () => copyLoc('inp-loc'));
+        bindBtn('menu-btn-loc-load', () => loadLoc('menu-inp-loc'));
+        bindBtn('menu-btn-loc-copy', () => copyLoc('menu-inp-loc'));
         
         document.querySelectorAll('.canvas-container').forEach((cont, idx) => {
             const isR = idx === 1;
