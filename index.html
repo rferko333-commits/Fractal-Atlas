@@ -1343,7 +1343,7 @@ const app = {
         let targetW = window.innerWidth, targetH = window.innerHeight;
 
         if(resChoice === '2') { targetW=1920; targetH=1080; }
-        else if(resChoice === '3') { targetW=2560; targetH=1440; } // New 1440p target
+        else if(resChoice === '3') { targetW=2560; targetH=1440; } // 1440p Target
         else if(resChoice === '4') { targetW=3840; targetH=2160; }
         else if(resChoice === '8') { targetW=7680; targetH=4320; }
         else if(resChoice === 'custom') { 
@@ -1389,8 +1389,9 @@ const app = {
                 const isNebulaAtlas = (this.state.mode === 2 && isRight);
                 const isAnti = this.state.anti && this.state.mode === 1;
 
-                // Maximize processor load: Will use at least 24 threads even if browser obfuscates hardwareConcurrency to lower values
-                const numThreads = Math.max(navigator.hardwareConcurrency || 4, 24);
+                // Maximize processor load: Will forcefully use at least 24 threads 
+                // to completely saturate your 24-core processor.
+                const numThreads = Math.max(navigator.hardwareConcurrency || 24, 24);
                 const samplesPerThread = Math.ceil(totalSamples / numThreads);
                 
                 const workerCode = `
@@ -1466,9 +1467,10 @@ const app = {
                                 }
                                 if(px>=0 && px<w && py>=0 && py<h) {
                                     let idx = ((h - 1 - py) * w + px) * 3; 
-                                    if(step > p.r) this.hist[idx] += glow; 
-                                    if(step > p.g) this.hist[idx+1] += glow; 
-                                    if(step > p.b) this.hist[idx+2] += glow; 
+                                    // FIXED: Changed this.hist to hist
+                                    if(step > p.r) hist[idx] += glow; 
+                                    if(step > p.g) hist[idx+1] += glow; 
+                                    if(step > p.b) hist[idx+2] += glow; 
                                 }
                             }
                         }
