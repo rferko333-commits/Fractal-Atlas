@@ -1610,8 +1610,11 @@ const app = {
             a.href = stampSignature(ctx.cvs).toDataURL('image/png');
             a.click();
             
-            ctx.cvs.width = ctx.cvs.clientWidth * (window.devicePixelRatio||1);
-            ctx.cvs.height = ctx.cvs.clientHeight * (window.devicePixelRatio||1);
+            // Restore both the physical canvas size AND the WebGL viewport!
+            ctx.cvs.width = ow; 
+            ctx.cvs.height = oh; 
+            ctx.gl.viewport(0, 0, ow, oh);
+            
             this.state.saving = false;
             ui.toggleModal(false);
         }
